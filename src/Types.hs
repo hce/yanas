@@ -141,7 +141,8 @@ data AirspaceClassification = AirspaceA | AirspaceB | AirspaceC |
 data AirspaceFlags = TMZ | CTR | RVSR
                    deriving (Show, Eq)
                          
-data VerticalPosition = FL Int | AMSLQNH Int | Below AirspaceClassification |
+data VerticalPosition = GND | FL Int | AMSLQNH Int |
+                        Below AirspaceClassification |
                         Above AirspaceClassification
                       deriving (Show, Eq)
                         

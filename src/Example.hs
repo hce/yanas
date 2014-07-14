@@ -196,5 +196,15 @@ airspace = [AC Aeroplane {
               vfrdesignation="November",
               vfrdesignationletter=Just 'N',
               vfrctr="CTR Frankfurt"
+              },
+            Air Airspace {
+              airClassification=AirspaceD,
+              airFlags=CTR,
+              airVBottom=GND,
+              airVTop=Below AirspaceC,
+              airPolygone=[(mkPos 8 43.4, mkPos 49 52.6),
+                           (mkPos 8 50.2, mkPos 49 57.1),
+                           (mkPos 8 48.8, mkPos 50 0.3),
+                           (mkPos 8 35.6, mkPos 50 8.2)]              
               }
            ]
