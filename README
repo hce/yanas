@@ -1,0 +1,11 @@
+Welcome to YANAS, yet another air traffic control simulator.
+
+The goal behind this project is to create a realistic simulator that
+follows standard ATC procedures. As such, it is planned to support
+SIDs and STARs as specified in the AIP, that the various aircraft will
+be able to follow automatically without controller intervention, and
+when necessary, accepting a direct, an amended or an alternative
+clearance. Why? Because it's fun.
+
+This project is in a very early stage right now, I'm mainly putting it
+up on github at this point to have a backup of the files. :-}
