@@ -202,6 +202,7 @@ airspace = [AC Aeroplane {
               airFlags=CTR,
               airVBottom=GND,
               airVTop=Below AirspaceC,
+              airActive = H24,
               airPolygone=[(mkPos 8 43.4, mkPos 49 52.6),
                            (mkPos 8 50.2, mkPos 49 57.1),
                            (mkPos 8 48.8, mkPos 50 0.3),

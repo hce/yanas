@@ -145,12 +145,16 @@ data VerticalPosition = GND | FL Int | AMSLQNH Int |
                         Below AirspaceClassification |
                         Above AirspaceClassification
                       deriving (Show, Eq)
+                               
+data OperatingHours = H24 | HJ | HN | HS | HT | HX
+                    deriving (Show, Eq)
                         
 data Airspace = Airspace {
   airClassification :: AirspaceClassification,
   airFlags :: AirspaceFlags,
   airVBottom :: VerticalPosition,
   airVTop :: VerticalPosition,
+  airActive :: OperatingHours,
   airPolygone :: [LonLat]
   }
                 deriving (Show, Eq)
