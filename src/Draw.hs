@@ -2,6 +2,7 @@ module Draw where
 
 import Control.Applicative
 import Control.Monad
+import GHC.Int
 import qualified Data.HashMap.Strict as Map
 import Graphics.UI.SDL.Types
 import Graphics.UI.SDL.Video
@@ -18,7 +19,7 @@ import qualified Graphics.UI.SDL.Primitives as GFX
 import Types
 import AVMisc
 
-coordToScreen :: State -> (Double, Double) -> (Int, Int)
+coordToScreen :: Integral n => State -> LonLat -> (n, n)
 coordToScreen  s (plon, plat) = (x, y)
   where
     (gl, gt, gr, gb) = (stView s)
@@ -135,6 +136,13 @@ drawWP s (VFRRP lon lat comp dsg dsgl ctr) = do
   return ()
   where
     coords = coordToScreen s (lon, lat)
+    
+drawAir :: State -> Airspace -> IO Bool
+drawAir s spc = GFX.polygon screen coords color
+  where
+    screen = stScreen s
+    coords = map (coordToScreen s) $ airPolygone spc
+    color = Pixel 65536
 
 drawAirspace :: State -> IO ()
 drawAirspace state = mapM_ drawAirspaceElement aspc
@@ -147,3 +155,4 @@ drawAirspace state = mapM_ drawAirspaceElement aspc
       RWY runway    -> drawRWY  state runway
       OBS obstacle  -> drawOBS  state obstacle
       WP waypoint   -> drawWP   state waypoint
+      Air airspace  -> drawAir  state airspace >> return ()

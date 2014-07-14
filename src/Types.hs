@@ -15,6 +15,7 @@ import Graphics.UI.SDL.TTF.General as TTFG
 import Graphics.UI.SDL.TTF.Types
 import qualified Graphics.UI.SDL.Primitives as GFX
 
+type LonLat = (Double, Double)
 
 data State = State {
   stScreen :: Surface,
@@ -122,7 +123,7 @@ data Obstacle = Obstacle {
   obsdesignation :: String
   }
                 deriving (Show, Eq)
-                         
+
 data Waypoint = VFRRP {
   vfrlon :: Double,
   vfrlat :: Double,
@@ -131,7 +132,28 @@ data Waypoint = VFRRP {
   vfrdesignationletter :: Maybe Char,  
   vfrctr :: String}
                 deriving (Show, Eq)
+                         
+data AirspaceClassification = AirspaceA | AirspaceB | AirspaceC |
+                              AirspaceD | AirspaceE | AirspaceF |
+                              AirspaceG | AirspaceEDR | AirspaceEDD
+                            deriving (Show, Eq)
+                                                                  
+data AirspaceFlags = TMZ | CTR | RVSR
+                   deriving (Show, Eq)
+                         
+data VerticalPosition = FL Int | AMSLQNH Int | Below AirspaceClassification |
+                        Above AirspaceClassification
+                      deriving (Show, Eq)
+                        
+data Airspace = Airspace {
+  airClassification :: AirspaceClassification,
+  airFlags :: AirspaceFlags,
+  airVBottom :: VerticalPosition,
+  airVTop :: VerticalPosition,
+  airPolygone :: [LonLat]
+  }
+                deriving (Show, Eq)
 
 data Element = AC Aeroplane | BC Beacon | RWY Runway |
-                 OBS Obstacle | WP Waypoint
-                 deriving (Show, Eq)
+                 OBS Obstacle | WP Waypoint | Air Airspace
+             deriving (Show, Eq)
