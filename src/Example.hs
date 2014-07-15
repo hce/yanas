@@ -20,6 +20,7 @@ airspace = [AC Aeroplane {
                acvspeed=0,
                actruealt=1300,
                actransponder=([SquawkA, SquawkC, SquawkS], 4447),
+               acfrequency=119900000,
                acatccommands=[]},
             AC Aeroplane {
                acregistration="DEAQA",
@@ -36,6 +37,7 @@ airspace = [AC Aeroplane {
                acheading=51,
                acvspeed=0,
                actruealt=1400,
+               acfrequency=118400000,
                actransponder=([SquawkA, SquawkC, SquawkS], 4441),
                acatccommands=[]},
             AC Aeroplane {
@@ -53,6 +55,7 @@ airspace = [AC Aeroplane {
                acheading=40,
                acvspeed=0,
                actruealt=1300,
+               acfrequency=119150000,
                actransponder=([SquawkA, SquawkC, SquawkS], 7000),
                acatccommands=[]},
             AC Aeroplane {
@@ -70,6 +73,7 @@ airspace = [AC Aeroplane {
                acheading=252,
                acvspeed=0,
                actruealt=8200,
+               acfrequency=127275000,
                actransponder=([SquawkA, SquawkC, SquawkS], 1000),
                acatccommands=[]},
             AC Aeroplane {
@@ -87,6 +91,7 @@ airspace = [AC Aeroplane {
                acheading=210,
                acvspeed=0,
                actruealt=8200,
+               acfrequency=127275000,
                actransponder=([SquawkA, SquawkC, SquawkS], 1000),
                acatccommands=[]},
             BC Beacon {
@@ -201,7 +206,7 @@ airspace = [AC Aeroplane {
               airClassification=AirspaceD,
               airFlags=CTR,
               airVBottom=GND,
-              airVTop=Below AirspaceC,
+              airVTop=BelowA AirspaceC,
               airActive = H24,
               airPolygone=[(mkPos 8 43.4, mkPos 49 52.6),
                            (mkPos 8 50.2, mkPos 49 57.1),
@@ -209,3 +214,13 @@ airspace = [AC Aeroplane {
                            (mkPos 8 35.6, mkPos 50 8.2)]              
               }
            ]
+
+exampleFrequencies :: [(Frequency, Designation)]
+exampleFrequencies = [(f 118400000, "Egelsbach Info"),
+                      (f 119150000, "Langen Information"),
+                      (f 119900000, "Frankfurt Tower"),
+                      (f 127275000, "Frankfurt Director"),
+                      (f 136500000, "Frankfurt Tower")]
+  where
+    f :: Int -> Frequency
+    f = Frequency

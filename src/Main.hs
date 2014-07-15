@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Applicative
+import Control.Concurrent
 import Control.Monad
 import qualified Data.HashMap.Strict as Map
 import Graphics.UI.SDL.Types
@@ -20,16 +21,18 @@ import Prelude hiding (flip)
 import AVMisc
 import Draw
 import Types
-import Example
+import Network
 import Movement
 
-docoInitScreen = do
+import Example
+
+docoInitScreen =
   setVideoMode 800 600 24 [DoubleBuf]
 
 initState :: Surface -> Font -> [Element] -> IO State
 initState screen mainfont airspace = do
-  sfcs <- (zip (map snd imgs)) <$> mapM (Img.load . ((++) "dist/resources/img/") . fst) imgs
-  return $ State {
+  sfcs <- zip (map snd imgs) <$> mapM (Img.load . ("dist/resources/img/" ++) . fst) imgs
+  return State {
     stScreen=screen,
     stScreenSize=(surfaceGetWidth screen, surfaceGetHeight screen),
     stMainfont=mainfont,
@@ -46,11 +49,12 @@ initState screen mainfont airspace = do
             ("orrp.gif", "orrp")]
 
 main :: IO ()
-main = do
+main = do  
   screen <- docoInitScreen
   TTFG.init
   mainfont <- openFont "dist/resources/FreeSans.ttf" 12
   state <- initState screen mainfont airspace
+  server <- atcServer
   calcit state 600
 
 calcit state count = when (count > 0) $ do
@@ -58,7 +62,7 @@ calcit state count = when (count > 0) $ do
   drawAirspace state
   flip screen
   delay 100
-  calcit state {stAirspace=(moveAeroplanes 0.100 aspc)} (count - 1)
+  calcit state { stAirspace=moveAeroplanes 0.100 aspc } (count - 1)
   where
     aspc = stAirspace state
     screen = stScreen state
