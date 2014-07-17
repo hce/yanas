@@ -4,11 +4,14 @@ import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Chan
 import Control.Monad
+import Control.Monad.Trans
 import Network.Socket
 import System.IO
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.Combinator
+import Text.Parsec.Prim (runParserT, modifyState)
+import Text.Parsec.String (GenParser, Parser)
 
 import qualified Data.HashMap.Strict as Map
 
@@ -16,23 +19,28 @@ import Types
 
 import Example
 
-
 data ATCState = ATCState {
   atcFrequencies :: [(Frequency, Designation, Chan ATCCommand)],
   atcRecorders :: [ThreadId]
   }
                 
 data ATCHandlerState = ATCHandlerState {
+  ahAtcState :: ATCState,
+  ahHandle :: Handle,
   ahFreq :: Maybe (Chan ATCCommand, Frequency),
   ahQuit :: Bool
   }
-                
--- means :: String -> a -> Parsec a
--- means a b = string a >> return b
--- callsigns :: Parsec String
--- callsigns = choice ["Cactus" `means` "AWE",
---                    "Lufthansa" `means` "DLH",
---                    "German Cargo" `means` "BOX"]
+                       
+type ATCParser = ParsecT String ATCHandlerState IO ()
+                       
+means :: String -> a -> Parser a
+means a b = string a >> return b
+
+callsigns :: Parser String
+callsigns = choice ["Cactus" `means` "AWE",
+                    "Lufthansa" `means` "DLH",
+                    "German Cargo" `means` "BOX"]
+
 
 atcInit :: IO ATCState
 atcInit = do
@@ -95,6 +103,8 @@ atcHandler (s, a) state = do
   hPutStrLn h "======================================================================\n"
   
   let cs = ATCHandlerState {
+        ahAtcState = state,
+        ahHandle = h,
         ahFreq=Nothing,
         ahQuit=False
         }
@@ -119,11 +129,60 @@ atcMainLoop h s cs = do
         Nothing        -> "NoFreq"
   hPutStr h $ "ATC [" ++ freq ++ "] > "
   l <- hGetLine h
-  hPutStrLn h $ "You said " ++ show l
-  return $ case l of
-    "quit" -> cs { ahQuit=True }
-    otherwise -> cs
+  res <- runParserT acmds cs "stdin" l
+  case res of
+    Left err -> hPrint h err >> return cs
+    Right newstate -> return newstate
   
-  
+--acmds :: ATCHandlerState -> ATCParser
+--acmds = choice . (zipWith (id) commands) . repeat
+--  where
+--    commands = [acmdF]
+    
+aPutStrLn :: String -> ATCParser
+aPutStrLn s = do
+  state <- getState
+  lift $ hPutStrLn (ahHandle state) s
 
-  
+aPrint :: Show a => a -> ATCParser
+aPrint = aPutStrLn . show
+    
+acmds :: ParsecT String ATCHandlerState IO ATCHandlerState
+acmds = choice commands >> getState
+  where
+    commands = [acmdF,
+                acmdQuit]
+    
+acmdQuit :: ATCParser
+acmdQuit = do
+  string "quit"
+  modifyState (\s -> s {ahQuit=True})
+
+acmdF :: ATCParser
+acmdF = do
+  atcstate <- ahAtcState <$> getState
+  string "f"
+  spaces
+  part1 <- sequence $ take 3 $ repeat digit
+  string "."
+  part2 <- (:[]) <$> digit
+  part3 <- "00" `option` sequence [digit, digit]
+  let freq = part1 ++ "." ++ part2 ++ part3 ++ "MHz"
+      freqi :: Int
+      freqi = (read part1) * 1000000 +
+              (read part2) * 100000 +
+              (read part3) * 1000
+      freqchan = findFreq (atcFrequencies atcstate) (Frequency freqi)
+  aPutStrLn $ "Setting your frequency to " ++ freq ++ "!"
+  case freqchan of
+    Just (chan, designation) -> do
+      modifyState (\s -> s {ahFreq=Just (chan, Frequency freqi)} )
+      aPutStrLn $ "There. You are tuned into " ++ designation ++ " now."
+    Nothing ->
+      aPutStrLn "Frequency is not in use"
+  where
+    findFreq :: [(Frequency, Designation, Chan ATCCommand)] -> Frequency -> Maybe (Chan ATCCommand, Designation)
+    findFreq ((f,d,c):fs) wf = if f == wf
+                               then Just (c, d)
+                               else findFreq fs wf
+    findFreq [] _            = Nothing
