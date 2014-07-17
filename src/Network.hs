@@ -89,6 +89,7 @@ atcHandler (s, a) state = do
   hPutStrLn h "----------------------------------------------------------------------\n"
   hPutStrLn h "To begin your shift, select a frequency!"
   hPutStrLn h "The command for that is: f <FREQ>"
+  hPutStrLn h "<FREQ> must be in the form 118.0, 118.4 or 118.250."
   hPutStrLn h "The following frequencies are available:"
   mapM_ (\(f,d,_) -> hPutStrLn h $ "    " ++ show f ++ " | " ++ d) (atcFrequencies state)
   hPutStrLn h "======================================================================\n"
@@ -100,7 +101,7 @@ atcHandler (s, a) state = do
 
   void $ foreverWithState cs (atcMainLoop h state)
   
-  hPutStrLn h "Hope you hade safe fun! Bye!"
+  hPutStrLn h "Hope you had safe fun! Bye!"
   hClose h
   
   

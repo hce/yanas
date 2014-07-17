@@ -42,7 +42,8 @@ initState screen mainfont airspace = do
     }
     
   where 
-    viewScreen = (mkPos 8 20, mkPos 50 30, mkPos 8 55, mkPos 49 30)
+--    viewScreen = (mkPos 8 20, mkPos 50 30, mkPos 8 55, mkPos 49 30)
+    viewScreen = (mkPos 8 7, mkPos 50 20, mkPos 9 0, mkPos 49 40)
     imgs = [("ndb.gif", "ndb"),
             ("vor.gif", "vor"),
             ("crp.gif", "crp"),

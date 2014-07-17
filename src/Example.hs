@@ -202,6 +202,14 @@ airspace = [AC Aeroplane {
               vfrdesignationletter=Just 'N',
               vfrctr="CTR Frankfurt"
               },
+            WP VFRRP {
+              vfrlat=mkPos 49 56.1,
+              vfrlon=mkPos 8 21.3,
+              vfrcompulsory=True,
+              vfrdesignation="Romeo 1",
+              vfrdesignationletter=Nothing,
+              vfrctr="CTR Frankfurt"
+              },
             Air Airspace {
               airClassification=AirspaceD,
               airFlags=[CTR],
@@ -222,7 +230,7 @@ airspace = [AC Aeroplane {
               airPolygone=[(mkPos 8 36.1, mkPos 49 54.7),
                            (mkPos 8 27, mkPos 49 54.7),
                            (mkPos 8 27, mkPos 49 58),
-                           (mkPos 8 28.6, mkPos 49 57),
+                           (mkPos 8 23.0, mkPos 49 57),
                            (mkPos 8 19.8, mkPos 50 06),
                            (mkPos 8 40, mkPos 50 07.5),
                            (mkPos 8 42.5, mkPos 50 07.5),
