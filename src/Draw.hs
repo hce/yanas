@@ -137,11 +137,12 @@ drawWP s (VFRRP lon lat comp dsg dsgl ctr) = do
     coords = coordToScreen s (lon, lat)
     
 drawAir :: State -> Airspace -> IO Bool
-drawAir s spc = GFX.aaPolygon screen coords color
+drawAir s spc = GFX.polygon screen coords color
   where
     screen = stScreen s
-    coords = map (coordToScreen s) $ airPolygone spc
+    coords = map (coordToScreen s) $ poly
     color = Pixel (255 + 255 * 256 + 255 * 65536)
+    poly = airPolygone spc
 
 drawAirspace :: State -> IO ()
 drawAirspace state = mapM_ drawAirspaceElement aspc

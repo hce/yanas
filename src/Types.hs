@@ -220,7 +220,7 @@ data OperatingHours = H24 | HJ | HN | HS | HT | HX
                         
 data Airspace = Airspace {
   airClassification :: AirspaceClassification,
-  airFlags :: AirspaceFlags,
+  airFlags :: [AirspaceFlags],
   airVBottom :: VerticalPosition,
   airVTop :: VerticalPosition,
   airActive :: OperatingHours,

@@ -204,14 +204,30 @@ airspace = [AC Aeroplane {
               },
             Air Airspace {
               airClassification=AirspaceD,
-              airFlags=CTR,
+              airFlags=[CTR],
               airVBottom=GND,
               airVTop=BelowA AirspaceC,
-              airActive = H24,
-              airPolygone=[(mkPos 8 43.4, mkPos 49 52.6),
-                           (mkPos 8 50.2, mkPos 49 57.1),
-                           (mkPos 8 48.8, mkPos 50 0.3),
-                           (mkPos 8 35.6, mkPos 50 8.2)]              
+              airActive = HJ,
+              airPolygone=[(mkPos 8 36.1, mkPos 49 54),
+                           (mkPos 8 36.1, mkPos 49 59),
+                           (mkPos 8 44.5, mkPos 50 02.7),
+                           (mkPos 8 44.5, mkPos 49 54)]              
+              },
+            Air Airspace {
+              airClassification=AirspaceD,
+              airFlags=[CTR],
+              airVBottom=GND,
+              airVTop=BelowA AirspaceC,
+              airActive=H24,
+              airPolygone=[(mkPos 8 36.1, mkPos 49 54.7),
+                           (mkPos 8 27, mkPos 49 54.7),
+                           (mkPos 8 27, mkPos 49 58),
+                           (mkPos 8 28.6, mkPos 49 57),
+                           (mkPos 8 19.8, mkPos 50 06),
+                           (mkPos 8 40, mkPos 50 07.5),
+                           (mkPos 8 42.5, mkPos 50 07.5),
+                           (mkPos 8 46, mkPos 50 3.5),
+                           (mkPos 8 36.1, mkPos 49 59)]
               }
            ]
 
