@@ -46,7 +46,7 @@ data RateFlag = OrMore | OrLess
 data Rate = Rate Int (Maybe RateFlag)
           deriving (Eq, Show)
 
-data TurnDirection = TurnLeft | TurnRight
+data TurnDirection = TurnLeft Int | TurnRight Int | TurnDirect Waypoint
                    deriving (Eq, Show)
                             
 type Designation = String
@@ -67,7 +67,7 @@ data ACSay = Again
            | Type
            deriving (Eq, Show) 
 
-data ACCommand = Turn TurnDirection Int 
+data ACCommand = Turn TurnDirection
                | Climb Int Rate
                | Descend Int Rate
                | Speed Int
@@ -109,7 +109,7 @@ newtype ZuluTime = ZuluTime Integer
                         
 data ATCCommand = ACCmd {
   cmdCallsign   :: [String],
-  cmdCondition  :: ACCondition,
+  cmdCondition  :: Maybe ACCondition,
   cmdCommand    :: ACCommand,
   cmdLimit      :: Maybe Element,
   cmdValidity   :: (Maybe ZuluTime, Maybe ZuluTime)

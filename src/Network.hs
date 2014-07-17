@@ -26,21 +26,38 @@ data ATCState = ATCState {
                 
 data ATCHandlerState = ATCHandlerState {
   ahAtcState :: ATCState,
+  ahLastACCallsign :: [String],
   ahHandle :: Handle,
   ahFreq :: Maybe (Chan ATCCommand, Frequency),
   ahQuit :: Bool
   }
                        
-type ATCParser = ParsecT String ATCHandlerState IO ()
+type ATCParser a = ParsecT String ATCHandlerState IO a
                        
-means :: String -> a -> Parser a
+means :: String -> a -> ATCParser a
 means a b = string a >> return b
 
-callsigns :: Parser String
-callsigns = choice ["Cactus" `means` "AWE",
-                    "Lufthansa" `means` "DLH",
-                    "German Cargo" `means` "BOX"]
-
+parseCallsign :: ATCParser String
+parseCallsign = choice ["Cactus" `means` "AWE",
+                        "Lufthansa" `means` "DLH",
+                        "German Cargo" `means` "BOX"]
+                
+parseWaypoint :: ATCParser Waypoint
+parseWaypoint = undefined
+                
+parseAC :: ATCParser String
+parseAC = choice [callsign, registration]
+  where 
+    registration = do
+      fst <- upper
+      fol <- if fst == 'D'
+             then sequence $ replicate 4 upper
+             else many1 $ choice [digit, upper]
+      return $ fst:fol
+    callsign = do
+      cs1 <- parseCallsign
+      cs2 <- many1 $ choice [digit, upper]
+      return $ cs1 ++ cs2
 
 atcInit :: IO ATCState
 atcInit = do
@@ -106,7 +123,8 @@ atcHandler (s, a) state = do
         ahAtcState = state,
         ahHandle = h,
         ahFreq=Nothing,
-        ahQuit=False
+        ahQuit=False,
+        ahLastACCallsign=[]
         }
 
   void $ foreverWithState cs (atcMainLoop h state)
@@ -139,31 +157,70 @@ atcMainLoop h s cs = do
 --  where
 --    commands = [acmdF]
     
-aPutStrLn :: String -> ATCParser
+aPutStrLn :: String -> ATCParser ()
 aPutStrLn s = do
   state <- getState
   lift $ hPutStrLn (ahHandle state) s
 
-aPrint :: Show a => a -> ATCParser
+aPrint :: Show a => a -> ATCParser ()
 aPrint = aPutStrLn . show
+
+aSimpleCommand :: ACCommand -> ATCParser()
+aSimpleCommand cmd = do
+  acs <- ahLastACCallsign <$> getState
+  freqinfo <- ahFreq <$> getState
+  when (freqinfo == Nothing) $ fail "Tune into a frequency first"
+  let Just (chan, _) =  freqinfo
+      cmd' = ACCmd {
+        cmdCallsign=acs,
+        cmdCondition=Nothing,
+        cmdLimit=Nothing,
+        cmdValidity=(Nothing,Nothing),
+        cmdCommand=cmd
+        }
+  lift $ writeChan chan cmd'
     
-acmds :: ParsecT String ATCHandlerState IO ATCHandlerState
-acmds = choice commands >> getState
+acmds :: ATCParser ATCHandlerState
+acmds = choice (map try commands) >> getState
   where
     commands = [acmdF,
-                acmdQuit]
+                acmdQuit,
+                acmdTurn]
     
-acmdQuit :: ATCParser
+acmdQuit :: ATCParser ()
 acmdQuit = do
   string "quit"
   modifyState (\s -> s {ahQuit=True})
+  
+acmdTurn :: ATCParser ()
+acmdTurn = do
+  parseAC
+  space
+  string "turn"
+  space
+  turndir <- leftright
+  space
+  choice [(heading turndir), direct]
+  where
+    heading turndir = do
+      string "heading"
+      space
+      dir <- read <$> sequence (replicate 3 digit)
+      aSimpleCommand $ Turn $ turndir dir
+    direct = do
+      string "direct"
+      space
+      wpnt <- parseWaypoint
+      aSimpleCommand $ Turn $ TurnDirect wpnt
+    leftright = choice ["left" `means` TurnLeft,
+                        "right" `means` TurnRight]
 
-acmdF :: ATCParser
+acmdF :: ATCParser ()
 acmdF = do
   atcstate <- ahAtcState <$> getState
   string "f"
-  spaces
-  part1 <- sequence $ take 3 $ repeat digit
+  space
+  part1 <- sequence $ replicate 3 digit
   string "."
   part2 <- (:[]) <$> digit
   part3 <- "00" `option` sequence [digit, digit]
