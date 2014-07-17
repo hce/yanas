@@ -140,7 +140,7 @@ drawAir :: State -> Airspace -> IO Bool
 drawAir s spc = GFX.polygon screen coords color
   where
     screen = stScreen s
-    coords = map (coordToScreen s) $ poly
+    coords = map (coordToScreen s) poly
     color = Pixel (255 + 255 * 256 + 255 * 65536)
     poly = airPolygone spc
 
