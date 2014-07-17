@@ -51,7 +51,7 @@ data TurnDirection = TurnLeft Int | TurnRight Int | TurnDirect Waypoint
                             
 type Designation = String
 data Frequency = Frequency Int
-                 deriving (Eq)
+                 deriving (Eq, Ord)
 
 data RelVPos = Below | Same | Above
              deriving (Eq, Show)

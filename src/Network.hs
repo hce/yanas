@@ -3,6 +3,7 @@ module Network where
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Chan
+import Control.Concurrent.STM.TVar
 import Control.Monad
 import Control.Monad.Trans
 import Network.Socket
@@ -15,12 +16,14 @@ import Text.Parsec.String (GenParser, Parser)
 
 import qualified Data.HashMap.Strict as Map
 
+import Command
 import Types
 
 import Example
 
 data ATCState = ATCState {
   atcFrequencies :: [(Frequency, Designation, Chan ATCCommand)],
+  atcGetters :: Map.HashMap Int (TVar [ATCCommand]),
   atcRecorders :: [ThreadId]
   }
                 
@@ -62,9 +65,11 @@ parseAC = choice [callsign, registration]
 atcInit :: IO ATCState
 atcInit = do
   newChannels <- mapM genfreqchannel exampleFrequencies
+  newGetters <- mapM (\(Frequency f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, cl))) newChannels
   recorders <- mapM (forkIO . recordATC) newChannels
   return ATCState {
     atcFrequencies=newChannels,
+    atcGetters=Map.fromList newGetters,
     atcRecorders=recorders
     }
   where

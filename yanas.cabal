@@ -54,7 +54,7 @@ executable yanas
   main-is:             Main.hs
   
   -- Modules included in this executable, other than Main.
-  other-modules:       AVMisc, Types, Draw, Movement, Network, Example
+  other-modules:       AVMisc, Types, Command, Draw, Movement, Network, Example
   
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    
