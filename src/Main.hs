@@ -62,9 +62,18 @@ main = do
 distributeCommands :: State -> ATCState -> IO State
 distributeCommands state server = do
   commands <- getAllCommands server
-  -- TODO
---  print commands
-  return state
+  let newstate = foldl assignCmd state commands
+--  when (newstate /= state) $ print $ stAirspace newstate
+  return newstate
+  where
+    assignCmd :: State -> (Frequency, ATCCommand) -> State
+    assignCmd s fc = s { stAirspace=map (assignToAC fc) (stAirspace s) }
+    assignToAC :: (Frequency, ATCCommand) -> Element -> Element
+    assignToAC (f,c) (AC aeroplane) = AC $
+      if (acfrequency aeroplane) == f
+      then aeroplane { acatccommands=(acatccommands aeroplane) ++ [c] }
+      else aeroplane
+    assignToAC _ element = element
 
 calcit :: State -> ATCState -> Int -> IO ()
 calcit state server count = when (count > 0) $ do

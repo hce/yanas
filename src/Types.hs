@@ -26,6 +26,7 @@ data State = State {
   stScreenSize :: (Int, Int),
   stSurfaces :: Map.HashMap String Surface
   }
+             deriving (Eq, Show)
 
 data Squawk = SquawkA | SquawkC | SquawkS | SquawkIdent
             | Squawk Int | Reset Squawk
@@ -146,7 +147,7 @@ data Aeroplane = Aeroplane {
   actransponder :: ([Squawk], Int),
   acequipment :: [Equipment],
   acflightplan :: String,
-  acfrequency :: Int,
+  acfrequency :: Frequency,
   acatccommands :: [ATCCommand]
   }
                  deriving (Show, Eq)

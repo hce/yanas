@@ -20,7 +20,7 @@ airspace = [AC Aeroplane {
                acvspeed=0,
                actruealt=1300,
                actransponder=([SquawkA, SquawkC, SquawkS], 4447),
-               acfrequency=119900000,
+               acfrequency=Frequency 119900000,
                acatccommands=[]},
             AC Aeroplane {
                acregistration="DEAQA",
@@ -37,7 +37,7 @@ airspace = [AC Aeroplane {
                acheading=51,
                acvspeed=0,
                actruealt=1400,
-               acfrequency=118400000,
+               acfrequency=Frequency 118400000,
                actransponder=([SquawkA, SquawkC, SquawkS], 4441),
                acatccommands=[]},
             AC Aeroplane {
@@ -55,7 +55,7 @@ airspace = [AC Aeroplane {
                acheading=40,
                acvspeed=0,
                actruealt=1300,
-               acfrequency=119150000,
+               acfrequency=Frequency 119150000,
                actransponder=([SquawkA, SquawkC, SquawkS], 7000),
                acatccommands=[]},
             AC Aeroplane {
@@ -73,7 +73,7 @@ airspace = [AC Aeroplane {
                acheading=252,
                acvspeed=0,
                actruealt=8200,
-               acfrequency=127275000,
+               acfrequency=Frequency 127275000,
                actransponder=([SquawkA, SquawkC, SquawkS], 1000),
                acatccommands=[]},
             AC Aeroplane {
@@ -91,7 +91,7 @@ airspace = [AC Aeroplane {
                acheading=210,
                acvspeed=0,
                actruealt=8200,
-               acfrequency=127275000,
+               acfrequency=Frequency 127275000,
                actransponder=([SquawkA, SquawkC, SquawkS], 1000),
                acatccommands=[]},
             BC Beacon {
