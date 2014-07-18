@@ -26,6 +26,7 @@ import Movement
 
 import Example
 
+
 docoInitScreen =
   setVideoMode 800 600 24 [DoubleBuf]
 
@@ -37,7 +38,7 @@ initState screen mainfont airspace = do
     stScreenSize=(surfaceGetWidth screen, surfaceGetHeight screen),
     stMainfont=mainfont,
     stAirspace=airspace,
-    stView = viewScreen,
+    stView=viewScreen,
     stSurfaces=Map.fromList sfcs
     }
     
@@ -54,16 +55,26 @@ main = do
   screen <- docoInitScreen
   TTFG.init
   mainfont <- openFont "dist/resources/FreeSans.ttf" 12
+  server <- atcServer  
   state <- initState screen mainfont airspace
-  server <- atcServer
-  calcit state 600
+  calcit state server 600
+  
+distributeCommands :: State -> ATCState -> IO State
+distributeCommands state server = do
+  commands <- getAllCommands server
+  -- TODO
+--  print commands
+  return state
 
-calcit state count = when (count > 0) $ do
+calcit :: State -> ATCState -> Int -> IO ()
+calcit state server count = when (count > 0) $ do
   fillRect screen (Just $ Rect 0 0 800 600) (Pixel 0)
   drawAirspace state
   flip screen
   delay 100
-  calcit state { stAirspace=moveAeroplanes 0.100 aspc } (count - 1)
+  state' <- distributeCommands state server
+  let state'' = state' { stAirspace=moveAeroplanes 0.100 aspc }
+  calcit state'' server (count - 1)
   where
     aspc = stAirspace state
     screen = stScreen state

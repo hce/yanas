@@ -21,9 +21,11 @@ import Types
 
 import Example
 
+type CommandChannel = [(Frequency, TVar [ATCCommand])]
+
 data ATCState = ATCState {
   atcFrequencies :: [(Frequency, Designation, Chan ATCCommand)],
-  atcGetters :: Map.HashMap Int (TVar [ATCCommand]),
+  atcGetters :: [(Frequency, TVar [ATCCommand])],
   atcRecorders :: [ThreadId]
   }
                 
@@ -36,7 +38,18 @@ data ATCHandlerState = ATCHandlerState {
   }
                        
 type ATCParser a = ParsecT String ATCHandlerState IO a
-                       
+
+getCommandChannel :: ATCState -> CommandChannel
+getCommandChannel = atcGetters
+
+getAllCommands :: ATCState -> IO [(Frequency, ATCCommand)]
+getAllCommands a = concat <$> mapM getCommands (atcGetters a)
+  where
+    getCommands :: (Frequency, TVar [ATCCommand]) -> IO [(Frequency, ATCCommand)]
+    getCommands (f, v) = do
+      commands <- getItems v
+      return $ zip (repeat f) commands
+
 means :: String -> a -> ATCParser a
 means a b = string a >> return b
 
@@ -65,11 +78,11 @@ parseAC = choice [callsign, registration]
 atcInit :: IO ATCState
 atcInit = do
   newChannels <- mapM genfreqchannel exampleFrequencies
-  newGetters <- mapM (\(Frequency f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, cl))) newChannels
+  newGetters <- mapM (\(f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, cl))) newChannels
   recorders <- mapM (forkIO . recordATC) newChannels
   return ATCState {
     atcFrequencies=newChannels,
-    atcGetters=Map.fromList newGetters,
+    atcGetters=newGetters,
     atcRecorders=recorders
     }
   where
