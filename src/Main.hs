@@ -70,10 +70,31 @@ distributeCommands state server = do
     assignCmd s fc = s { stAirspace=map (assignToAC fc) (stAirspace s) }
     assignToAC :: (Frequency, ATCCommand) -> Element -> Element
     assignToAC (f,c) (AC aeroplane) = AC $
-      if (acfrequency aeroplane) == f
-      then aeroplane { acatccommands=(acatccommands aeroplane) ++ [c] }
+      if acfrequency aeroplane == f
+      then aeroplane { acatccommands=acatccommands aeroplane ++ [c] }
       else aeroplane
     assignToAC _ element = element
+    
+handleAirspace :: State -> State
+handleAirspace s = s { stAirspace=map handleAP (stAirspace s) }
+
+handleAP :: Element -> Element
+handleAP (AC aeroplane) = AC $ handleAeroplane aeroplane
+handleAP element = element
+
+-- TODO: Handle validity and clearance limit!!
+handleAeroplane :: Aeroplane -> Aeroplane
+handleAeroplane a = foldl handleAeroplaneATCCommand a (map cmdCommand $ acatccommands a)
+
+handleAeroplaneATCCommand :: Aeroplane -> ACCommand -> Aeroplane
+handleAeroplaneATCCommand a (Turn (TurnLeft (Heading h))) =
+  a { acturnrate=(-120), acturnto=fromIntegral h }
+handleAeroplaneATCCommand a (Turn (TurnRight (Heading h))) =
+  a { acturnrate=120,    acturnto=fromIntegral h }
+
+                                                          
+  
+                    
 
 calcit :: State -> ATCState -> Int -> IO ()
 calcit state server count = when (count > 0) $ do

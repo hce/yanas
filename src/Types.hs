@@ -148,7 +148,10 @@ data Aeroplane = Aeroplane {
   acequipment :: [Equipment],
   acflightplan :: String,
   acfrequency :: Frequency,
-  acatccommands :: [ATCCommand]
+  acatccommands :: [ATCCommand],
+  
+  acturnrate :: Double,
+  acturnto :: Double
   }
                  deriving (Show, Eq)
 

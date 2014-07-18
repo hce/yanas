@@ -4,7 +4,7 @@ import Types
 import AVMisc
 
 moveAC :: Double -> Aeroplane -> Aeroplane
-moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height }
+moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading, acturnrate=newturnrate }
   where
     height = actruealt ap + (acvspeed ap * dt / 60)
     angle = acheading ap * pi / 180
@@ -15,6 +15,12 @@ moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height }
     dep = cos depangle
     depangle = (aclat ap + dy / 2) * pi / 180
     lon = aclon ap + dx
+    turnrate = acturnrate ap
+    newturnrate = if truncate (acturnto ap) == truncate (acheading ap)
+                  then 0
+                  else turnrate
+    curheading = acheading ap
+    newheading = curheading + 360 * acturnrate ap / dt
 
 moveAeroplanes :: Double -> [Element] -> [Element]
 moveAeroplanes dt (AC aircraft:as) = AC (moveAC dt aircraft):moveAeroplanes dt as
