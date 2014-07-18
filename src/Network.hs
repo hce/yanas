@@ -214,22 +214,24 @@ acmdTurn :: ATCParser ()
 acmdTurn = do
   parseAC
   space
-  string "turn"
-  space
-  turndir <- leftright
-  space
-  choice [(heading turndir), direct]
+  (turndir, skipheading) <- (TurnOwnDiscretion, True) `option` do
+    string "turn"
+    space
+    turndir' <- leftright
+    space
+    return (turndir', False)
+  choice $ map (\a->a turndir) $ ([direct] ++ (if skipheading then [] else [heading]))
   where
     heading turndir = do
       string "heading"
       space
       dir <- read <$> sequence (replicate 3 digit)
-      aSimpleCommand $ Turn $ turndir dir
-    direct = do
+      (aSimpleCommand . Turn . turndir . Heading) dir
+    direct turndir = do
       string "direct"
       space
       wpnt <- parseWaypoint
-      aSimpleCommand $ Turn $ TurnDirect wpnt
+      (aSimpleCommand . Turn . turndir . Direct) wpnt
     leftright = choice ["left" `means` TurnLeft,
                         "right" `means` TurnRight]
 

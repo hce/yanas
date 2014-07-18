@@ -46,7 +46,12 @@ data RateFlag = OrMore | OrLess
 data Rate = Rate Int (Maybe RateFlag)
           deriving (Eq, Show)
 
-data TurnDirection = TurnLeft Int | TurnRight Int | TurnDirect Waypoint
+data Heading = Heading Int
+             | Direct Waypoint
+             deriving (Eq, Show)
+
+data TurnDirection = TurnOwnDiscretion Heading
+                   | TurnLeft Heading | TurnRight Heading
                    deriving (Eq, Show)
                             
 type Designation = String
