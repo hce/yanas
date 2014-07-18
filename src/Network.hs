@@ -6,6 +6,7 @@ import Control.Concurrent.Chan
 import Control.Concurrent.STM.TVar
 import Control.Monad
 import Control.Monad.Trans
+import Data.Maybe
 import Network.Socket
 import System.IO
 import Text.Parsec
@@ -67,7 +68,7 @@ parseAC = choice [callsign, registration]
     registration = do
       fst <- upper
       fol <- if fst == 'D'
-             then sequence $ replicate 4 upper
+             then replicateM 4 upper
              else many1 $ choice [digit, upper]
       return $ fst:fol
     callsign = do
@@ -187,7 +188,7 @@ aSimpleCommand :: ACCommand -> ATCParser()
 aSimpleCommand cmd = do
   acs <- ahLastACCallsign <$> getState
   freqinfo <- ahFreq <$> getState
-  when (freqinfo == Nothing) $ fail "Tune into a frequency first"
+  when (isNothing freqinfo) $ fail "Tune into a frequency first"
   let Just (chan, _) =  freqinfo
       cmd' = ACCmd {
         cmdCallsign=acs,
@@ -220,12 +221,12 @@ acmdTurn = do
     turndir' <- leftright
     space
     return (turndir', False)
-  choice $ map (\a->a turndir) $ ([direct] ++ (if skipheading then [] else [heading]))
+  choice $ map (\a->a turndir) (direct : (if skipheading then [] else [heading]))
   where
     heading turndir = do
       string "heading"
       space
-      dir <- read <$> sequence (replicate 3 digit)
+      dir <- read <$> replicateM 3 digit
       (aSimpleCommand . Turn . turndir . Heading) dir
     direct turndir = do
       string "direct"
@@ -240,15 +241,15 @@ acmdF = do
   atcstate <- ahAtcState <$> getState
   string "f"
   space
-  part1 <- sequence $ replicate 3 digit
+  part1 <- replicateM 3 digit
   string "."
   part2 <- (:[]) <$> digit
   part3 <- "00" `option` sequence [digit, digit]
   let freq = part1 ++ "." ++ part2 ++ part3 ++ "MHz"
       freqi :: Int
-      freqi = (read part1) * 1000000 +
-              (read part2) * 100000 +
-              (read part3) * 1000
+      freqi = read part1 * 1000000 +
+              read part2 * 100000 +
+              read part3 * 1000
       freqchan = findFreq (atcFrequencies atcstate) (Frequency freqi)
   aPutStrLn $ "Setting your frequency to " ++ freq ++ "!"
   case freqchan of
