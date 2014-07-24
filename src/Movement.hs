@@ -20,10 +20,15 @@ moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading
                   then 0
                   else turnrate
     curheading = acheading ap
-    newheading = curheading + 360 * acturnrate ap / dt
+    newheading = normaliseHeading $ curheading + acturnrate ap / 60 * dt
 
 moveAeroplanes :: Double -> [Element] -> [Element]
 moveAeroplanes dt (AC aircraft:as) = AC (moveAC dt aircraft):moveAeroplanes dt as
 moveAeroplanes dt (a:as) = a:moveAeroplanes dt as
 moveAeroplanes _ []      = []
 
+normaliseHeading :: (Num a, Ord a) => a -> a
+normaliseHeading heading
+  | heading > 360    = normaliseHeading $ heading - 360
+  | heading < 0      = normaliseHeading $ heading + 360
+  | otherwise        = heading

@@ -57,7 +57,7 @@ main = do
   mainfont <- openFont "dist/resources/FreeSans.ttf" 12
   server <- atcServer  
   state <- initState screen mainfont airspace
-  calcit state server 600
+  calcit state server
   
 distributeCommands :: State -> ATCState -> IO State
 distributeCommands state server = do
@@ -80,32 +80,36 @@ handleAirspace s = s { stAirspace=map handleAP (stAirspace s) }
 
 handleAP :: Element -> Element
 handleAP (AC aeroplane) = AC $ handleAeroplane aeroplane
-handleAP element = element
+handleAP (BC beacon)    = BC beacon
+handleAP (RWY runway)   = RWY runway
+handleAP (OBS obstacle) = OBS obstacle
+handleAP (WP waypoint)  = WP waypoint
+handleAP (Air airspace) = Air airspace
 
 -- TODO: Handle validity and clearance limit!!
 handleAeroplane :: Aeroplane -> Aeroplane
-handleAeroplane a = foldl handleAeroplaneATCCommand a (map cmdCommand $ acatccommands a)
+handleAeroplane a = a' { acatccommands=[] }
+  where
+    a' = foldl handleAeroplaneATCCommand a simpleCommands
+    simpleCommands = map cmdCommand commands
+    commands = acatccommands a
 
 handleAeroplaneATCCommand :: Aeroplane -> ACCommand -> Aeroplane
 handleAeroplaneATCCommand a (Turn (TurnLeft (Heading h))) =
-  a { acturnrate=(-120), acturnto=fromIntegral h }
+  a { acturnrate=(-180), acturnto=fromIntegral h }
 handleAeroplaneATCCommand a (Turn (TurnRight (Heading h))) =
-  a { acturnrate=120,    acturnto=fromIntegral h }
+  a { acturnrate=180,    acturnto=fromIntegral h }
 
-                                                          
-  
-                    
-
-calcit :: State -> ATCState -> Int -> IO ()
-calcit state server count = when (count > 0) $ do
+calcit :: State -> ATCState -> IO ()
+calcit state server = do
   fillRect screen (Just $ Rect 0 0 800 600) (Pixel 0)
   drawAirspace state
   flip screen
   delay 100
   state' <- distributeCommands state server
-  let state'' = state' { stAirspace=moveAeroplanes 0.100 aspc }
-  calcit state'' server (count - 1)
+  let state'' = state' { stAirspace=moveAeroplanes 0.100 (stAirspace state') }
+      state''' = handleAirspace state''
+  calcit state''' server
   where
-    aspc = stAirspace state
     screen = stScreen state
 
