@@ -89,7 +89,8 @@ drawAC state ap = do
     str = [accallsign ap,
            actype ap ++ " A" ++ show (truncate $ actruealt ap / 100),
            "V" ++ show (truncate $ acvspeed ap) ++ " S" ++ show squawkcode,
-           (show . truncate . acspeed $ ap) ++ "KTAS"]
+           (show . truncate . acspeed $ ap) ++ "KTAS",
+           "H" ++ (show . truncate . acheading) ap ++ "TO" ++ show (acturnto ap)]
     (squawkmodes, squawkcode) = actransponder ap
     
 drawBC :: State -> Beacon -> IO ()

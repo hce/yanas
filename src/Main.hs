@@ -90,9 +90,20 @@ handleAP (Air airspace) = Air airspace
 handleAeroplane :: Aeroplane -> Aeroplane
 handleAeroplane a = a' { acatccommands=[] }
   where
-    a' = foldl handleAeroplaneATCCommand a simpleCommands
-    simpleCommands = map cmdCommand commands
+    a' = foldl handleCmd a commands
     commands = acatccommands a
+
+handleCmd :: Aeroplane -> ATCCommand -> Aeroplane
+handleCmd theplane thecommand
+  | applicable      = handleAeroplaneATCCommand theplane $ cmdCommand thecommand
+  | otherwise       = theplane
+  where
+    applicable = broadcast || callsignmatch || registrationmatch
+    callsignmatch = accallsign theplane `elem` callsigns
+    registrationmatch = acregistration theplane `elem` callsigns
+    callsigns = cmdCallsign thecommand
+    broadcast = cmdBroadcast thecommand
+        
 
 handleAeroplaneATCCommand :: Aeroplane -> ACCommand -> Aeroplane
 handleAeroplaneATCCommand a (Turn (TurnLeft (Heading h))) =

@@ -73,6 +73,7 @@ parseAC = choice [callsign, registration]
       return $ fst:fol
     callsign = do
       cs1 <- parseCallsign
+      space
       cs2 <- many1 $ choice [digit, upper]
       return $ cs1 ++ cs2
 
@@ -195,6 +196,7 @@ aSimpleCommand cmd = do
         cmdCondition=Nothing,
         cmdLimit=Nothing,
         cmdValidity=(Nothing,Nothing),
+        cmdBroadcast=False,
         cmdCommand=cmd
         }
   lift $ writeChan chan cmd'
@@ -213,7 +215,8 @@ acmdQuit = do
   
 acmdTurn :: ATCParser ()
 acmdTurn = do
-  parseAC
+  ac <- parseAC
+  modifyState (\s -> s {ahLastACCallsign=[ac]})
   space
   (turndir, skipheading) <- (TurnOwnDiscretion, True) `option` do
     string "turn"

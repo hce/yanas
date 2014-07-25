@@ -115,12 +115,11 @@ newtype ZuluTime = ZuluTime Integer
                         
 data ATCCommand = ACCmd {
   cmdCallsign   :: [String],
+  cmdBroadcast  :: Bool,
   cmdCondition  :: Maybe ACCondition,
   cmdCommand    :: ACCommand,
   cmdLimit      :: Maybe Element,
   cmdValidity   :: (Maybe ZuluTime, Maybe ZuluTime)
-  } | ACBroadcast {
-  cmdCommand    :: ACCommand
   }
                 deriving (Eq, Show)
 
