@@ -80,7 +80,8 @@ parseAC = choice [callsign, registration]
 atcInit :: IO ATCState
 atcInit = do
   newChannels <- mapM genfreqchannel exampleFrequencies
-  newGetters <- mapM (\(f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, cl))) newChannels
+  newChannels' <- mapM (\(a,b,chan) -> (dupChan chan >>= \c1 -> return (a,b,c1))) newChannels
+  newGetters <- mapM (\(f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, cl))) newChannels'
   recorders <- mapM (forkIO . recordATC) newChannels
   return ATCState {
     atcFrequencies=newChannels,
