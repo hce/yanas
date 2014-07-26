@@ -121,6 +121,9 @@ data ATCCommand = ACCmd {
   cmdLimit      :: Maybe Element,
   cmdValidity   :: (Maybe ZuluTime, Maybe ZuluTime)
   }
+                | ATCText { 
+  cmdText :: String
+  }
                 deriving (Eq, Show)
 
 data Equipment = ETransponder | EVHF | EUHF | EADF

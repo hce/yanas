@@ -80,18 +80,18 @@ acsay a s = a { acatcresponses=responses++[s] }
   where
     responses = acatcresponses a
     
-handleAirspace :: State -> (State, [String])
+handleAirspace :: State -> (State, [(Frequency, String)])
 handleAirspace s = (s { stAirspace=airspace'' }, concat responses)
   where
     airspace                 = stAirspace s
     airspace'                = map handleAP airspace
     (airspace'', responses)  = unzip $ map handleAPResponses airspace'
 
-handleAPResponses :: Element -> (Element, [String])
+handleAPResponses :: Element -> (Element, [(Frequency, String)])
 handleAPResponses (AC aeroplane) = (AC aeroplane', responses)
   where
     aeroplane' = aeroplane { acatcresponses=[] }
-    responses = acatcresponses aeroplane
+    responses = map ((,) (acfrequency aeroplane)) $ acatcresponses aeroplane
 handleAPResponses e = (e, [])
 
 handleAP :: Element -> Element
@@ -107,7 +107,7 @@ handleAeroplane :: Aeroplane -> Aeroplane
 handleAeroplane a = a' { acatccommands=[] }
   where
     a' = foldl handleCmd a commands
-    commands = acatccommands a
+    commands = [cmd | cmd@(ACCmd {}) <- acatccommands a]
 
 handleCmd :: Aeroplane -> ATCCommand -> Aeroplane
 handleCmd theplane thecommand
@@ -140,7 +140,7 @@ calcit state server = do
   state' <- distributeCommands state server
   let state'' = state' { stAirspace=moveAeroplanes 0.100 (stAirspace state') }
       (state''', responses) = handleAirspace state''
-  mapM_ putStrLn responses
+  mapM_ (uncurry (atcSay server)) responses
   calcit state''' server
   where
     screen = stScreen state

@@ -9,6 +9,7 @@ import Control.Monad.Trans
 import Data.Maybe
 import Network.Socket
 import System.IO
+import System.Timeout
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.Combinator
@@ -34,7 +35,8 @@ data ATCHandlerState = ATCHandlerState {
   ahAtcState :: ATCState,
   ahLastACCallsign :: [String],
   ahHandle :: Handle,
-  ahFreq :: Maybe (Chan ATCCommand, Frequency),
+  ahFreq :: Maybe (Chan ATCCommand, Frequency),  
+  ahChanListener :: Maybe (ThreadId, TVar [ATCCommand]),
   ahQuit :: Bool
   }
                        
@@ -81,7 +83,7 @@ atcInit :: IO ATCState
 atcInit = do
   newChannels <- mapM genfreqchannel exampleFrequencies
   newChannels' <- mapM (\(a,b,chan) -> (dupChan chan >>= \c1 -> return (a,b,c1))) newChannels
-  newGetters <- mapM (\(f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, cl))) newChannels'
+  newGetters <- mapM (\(f,_,chan) -> (makeChanListener chan >>= \cl -> return (f, snd cl))) newChannels'
   recorders <- mapM (forkIO . recordATC) newChannels
   return ATCState {
     atcFrequencies=newChannels,
@@ -105,9 +107,20 @@ recordATC (f,d,c) = do
       hPrint h (show command)
       hFlush h
       
+atcSay :: ATCState -> Frequency -> String -> IO ()
+atcSay state freq text = do
+  Just chan <- atcGetChannel' state freq
+  writeChan chan (ATCText text)
+      
 atcGetChannel :: ATCState -> Frequency -> IO (Maybe (Chan ATCCommand))
-atcGetChannel state freq
-  | length chans == 1 = Just <$> (dupChan . thr'3 . head) chans
+atcGetChannel = _atcGetChannel dupChan
+
+atcGetChannel' :: ATCState -> Frequency -> IO (Maybe (Chan ATCCommand))
+atcGetChannel' = _atcGetChannel (return . id)
+
+_atcGetChannel :: (Chan ATCCommand -> IO (Chan ATCCommand)) -> ATCState -> Frequency -> IO (Maybe (Chan ATCCommand))
+_atcGetChannel f state freq
+  | length chans == 1 = Just <$> (f . thr'3 . head) chans
   | otherwise         = return Nothing
   where
     chans = filter ((== freq) . fst'3) (atcFrequencies state)
@@ -139,13 +152,14 @@ atcHandler (s, a) state = do
   hPutStrLn h "The following frequencies are available:"
   mapM_ (\(f,d,_) -> hPutStrLn h $ "    " ++ show f ++ " | " ++ d) (atcFrequencies state)
   hPutStrLn h "======================================================================\n"
-  
+
   let cs = ATCHandlerState {
         ahAtcState = state,
         ahHandle = h,
         ahFreq=Nothing,
         ahQuit=False,
-        ahLastACCallsign=[]
+        ahLastACCallsign=[],
+        ahChanListener=Nothing
         }
 
   void $ foreverWithState cs (atcMainLoop h state)
@@ -161,18 +175,32 @@ foreverWithState s f = do
     then foreverWithState newstate f
     else return newstate
 
+atcPrintResponses :: Handle -> ATCHandlerState -> IO Bool
+atcPrintResponses h cs = do
+  case ahChanListener cs of
+    Just (_, chan) -> do
+      cmds <- getItems chan
+      let messages = [msg | msg@(ATCText {}) <- cmds]
+      mapM_ (hPutStrLn h . ("\r  Freq | " ++) . cmdText) messages
+      return True
+    Nothing -> return False
+
 atcMainLoop :: Handle -> ATCState -> ATCHandlerState -> IO ATCHandlerState
 atcMainLoop h s cs = do
   let freq = case ahFreq cs of
         Just (_, freq) -> show freq
         Nothing        -> "NoFreq"
-  hPutStr h $ "ATC [" ++ freq ++ "] > "
+  threadDelay 1000000 -- hack
+  atcPrintResponses h cs
+  let prompt = "ATC [" ++ freq ++ "] > "
+--  l <- atcGetLine 1000000 h prompt (atcPrintResponses h cs)
+  hPutStr h prompt
   l <- hGetLine h
   res <- runParserT acmds cs "stdin" l
   case res of
     Left err -> hPrint h err >> return cs
     Right newstate -> return newstate
-  
+
 --acmds :: ATCHandlerState -> ATCParser
 --acmds = choice . (zipWith (id) commands) . repeat
 --  where
@@ -258,7 +286,14 @@ acmdF = do
   aPutStrLn $ "Setting your frequency to " ++ freq ++ "!"
   case freqchan of
     Just (chan, designation) -> do
-      modifyState (\s -> s {ahFreq=Just (chan, Frequency freqi)} )
+      oldFreqListener <- ahChanListener <$> getState
+      case oldFreqListener of
+        Just (oldThreadId, _) -> lift $ killThread oldThreadId
+        Nothing -> return ()
+      chan' <- lift $ dupChan chan
+      (threadId, freqListener) <- lift $ makeChanListener chan'
+      modifyState (\s -> s { ahFreq=Just (chan, Frequency freqi),
+                             ahChanListener=Just (threadId, freqListener) } )
       aPutStrLn $ "There. You are tuned into " ++ designation ++ " now."
     Nothing ->
       aPutStrLn "Frequency is not in use"

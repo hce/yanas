@@ -9,11 +9,11 @@ import Control.Monad
 
 import Types
 
-makeChanListener :: Chan a -> IO (TVar [a])
+makeChanListener :: Chan a -> IO (ThreadId, TVar [a])
 makeChanListener chan = do
   tvar <- atomically $ newTVar []
-  forkIO $ listen chan tvar
-  return tvar
+  threadId <- forkIO $ listen chan tvar
+  return (threadId, tvar)
   where
     listen :: Chan a -> TVar [a] -> IO ()
     listen c v = forever $ do
