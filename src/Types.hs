@@ -148,7 +148,7 @@ data Aeroplane = Aeroplane {
   acflightplan :: String,
   acfrequency :: Frequency,
   acatccommands :: [ATCCommand],
-  
+  acatcresponses :: [String],
   acturnrate :: Double,
   acturnto :: Double
   }

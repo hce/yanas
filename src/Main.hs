@@ -75,8 +75,24 @@ distributeCommands state server = do
       else aeroplane
     assignToAC _ element = element
     
-handleAirspace :: State -> State
-handleAirspace s = s { stAirspace=map handleAP (stAirspace s) }
+acsay :: Aeroplane -> String -> Aeroplane
+acsay a s = a { acatcresponses=responses++[s] }
+  where
+    responses = acatcresponses a
+    
+handleAirspace :: State -> (State, [String])
+handleAirspace s = (s { stAirspace=airspace'' }, concat responses)
+  where
+    airspace                 = stAirspace s
+    airspace'                = map handleAP airspace
+    (airspace'', responses)  = unzip $ map handleAPResponses airspace'
+
+handleAPResponses :: Element -> (Element, [String])
+handleAPResponses (AC aeroplane) = (AC aeroplane', responses)
+  where
+    aeroplane' = aeroplane { acatcresponses=[] }
+    responses = acatcresponses aeroplane
+handleAPResponses e = (e, [])
 
 handleAP :: Element -> Element
 handleAP (AC aeroplane) = AC $ handleAeroplane aeroplane
@@ -106,10 +122,14 @@ handleCmd theplane thecommand
         
 
 handleAeroplaneATCCommand :: Aeroplane -> ACCommand -> Aeroplane
-handleAeroplaneATCCommand a (Turn (TurnLeft (Heading h))) =
-  a { acturnrate=(-180), acturnto=fromIntegral h }
-handleAeroplaneATCCommand a (Turn (TurnRight (Heading h))) =
-  a { acturnrate=180,    acturnto=fromIntegral h }
+handleAeroplaneATCCommand a (Turn (TurnLeft (Heading h))) = a''
+  where
+    a' = a { acturnrate=(-180), acturnto=fromIntegral h }
+    a'' = acsay a' $ "Left heading " ++ show h ++ " " ++ accallsign a'
+handleAeroplaneATCCommand a (Turn (TurnRight (Heading h))) = a''
+  where
+    a' = a { acturnrate=180,    acturnto=fromIntegral h }
+    a'' = acsay a' $ "Right heading " ++ show h ++ " " ++ accallsign a'
 
 calcit :: State -> ATCState -> IO ()
 calcit state server = do
@@ -119,7 +139,8 @@ calcit state server = do
   delay 100
   state' <- distributeCommands state server
   let state'' = state' { stAirspace=moveAeroplanes 0.100 (stAirspace state') }
-      state''' = handleAirspace state''
+      (state''', responses) = handleAirspace state''
+  mapM_ putStrLn responses
   calcit state''' server
   where
     screen = stScreen state
