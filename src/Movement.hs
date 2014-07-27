@@ -32,3 +32,37 @@ normaliseHeading heading
   | heading > 360    = normaliseHeading $ heading - 360
   | heading < 0      = normaliseHeading $ heading + 360
   | otherwise        = heading
+                       
+qnhtofl :: Int -> Int -> Int
+qnhtofl qnh alt = pressalt `quot` 100
+  where
+    pressalt = alt + 27 * qnhdiff
+    qnhdiff = qnh - 1013
+    
+fltoqnh :: Int -> Int -> Int
+fltoqnh qnh fl = fl * 100 - 27 * qnhdiff
+  where
+    qnhdiff = qnh - 1013
+
+qnhtotrue :: Int -> Int -> Int
+qnhtotrue temp alt = alt + round altCorrection                     
+  where
+    altCorrection = fromIntegral alt * 0.4 * tempdiff / 10
+    tempdiff = fromIntegral temp - stdtemp alt
+    
+fltotrue :: Int -> Int -> Int -> Int
+fltotrue temp qnh fl = truealt
+  where
+    truealt = qnhtotrue temp qnhalt
+    qnhalt  = fltoqnh qnh fl
+
+vpostofl :: Int -> VPos -> Int
+vpostofl qnh (Flightlevel fl)     = fltoqnh qnh fl
+vpostofl _   (Altitude alt)       = alt 
+
+vpostotrue :: Int -> Int -> VPos -> Int
+vpostotrue temp qnh (Flightlevel fl) = fltotrue temp qnh fl
+vpostotrue temp _   (Altitude alt)   = qnhtotrue temp alt
+
+stdtemp :: Int -> Double
+stdtemp truealt = 15 - (fromIntegral truealt * 0.65 / 328.084)

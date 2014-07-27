@@ -24,7 +24,10 @@ data State = State {
   stAirspace :: [Element],
   stView :: (Double, Double, Double, Double),
   stScreenSize :: (Int, Int),
-  stSurfaces :: Map.HashMap String Surface
+  stSurfaces :: Map.HashMap String Surface,
+  stSurfaceTemp :: Int,
+  stGndElev :: Int,
+  stQNH :: Int
   }
              deriving (Eq, Show)
 
@@ -44,7 +47,7 @@ data ApchType = APCHVisual | APCHIFR | APCHVOR | APCHNDB |
 
 data RateFlag = OrMore | OrLess
               deriving (Eq, Show)
-data Rate = Rate Int (Maybe RateFlag)
+data Rate = Rate Int (Maybe RateFlag) | OwnRate
           deriving (Eq, Show)
 
 data Heading = Heading Int
@@ -66,16 +69,26 @@ data RelMovement = LeftToRight | RightToLeft
 data ACReport = InSight
               | Vacated
               deriving (Eq, Show)
-data ACSay = Again
-           | Altitude
-           | Intentions
-           | Position
-           | Type
+data ACSay = SAYAgain
+           | SAYAltitude
+           | SAYIntentions
+           | SAYPosition
+           | SAYType
            deriving (Eq, Show) 
+                    
+-- VPos is only to be used for ATC commands
+-- In all other cases, true altitude is used.
+data VPos = Flightlevel Int
+          | Altitude Int
+            deriving (Eq)
+                     
+instance Show VPos where
+  show (Flightlevel fl) = "flightlevel " ++ show fl
+  show (Altitude alt)   = "altitude " ++ show alt ++ " feet"
 
 data ACCommand = Turn TurnDirection
-               | Climb Int Rate
-               | Descend Int Rate
+               | Climb VPos Rate
+               | Descend VPos Rate
                | Speed Int
                | FinalApproachSpeed
                | OwnSpeed
@@ -129,6 +142,7 @@ data ATCCommand = ACCmd {
 data Equipment = ETransponder | EVHF | EUHF | EADF
                deriving (Eq, Show)
 
+-- All altitudes are true altitues AMSL
 data Aeroplane = Aeroplane {
   acregistration :: String,
   accallsign :: String,
@@ -144,7 +158,7 @@ data Aeroplane = Aeroplane {
   acheading :: Double,
   -- fpm
   acvspeed :: Double,
-  -- *true* altitude AMSL!
+  acvclearedaltitude :: Int,
   actruealt :: Double,
   actransponder :: ([Squawk], Int),
   acequipment :: [Equipment],
@@ -153,7 +167,10 @@ data Aeroplane = Aeroplane {
   acatccommands :: [ATCCommand],
   acatcresponses :: [String],
   acturnrate :: Double,
-  acturnto :: Double
+  acturnto :: Double,
+  -- Todo: These two must be calc'ed dynamically!! (aeroplane specs, density alt)
+  acclimbrate :: Int,
+  acdescentrate :: Int
   }
                  deriving (Show, Eq)
 

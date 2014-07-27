@@ -39,7 +39,10 @@ initState screen mainfont airspace = do
     stMainfont=mainfont,
     stAirspace=airspace,
     stView=viewScreen,
-    stSurfaces=Map.fromList sfcs
+    stSurfaces=Map.fromList sfcs,
+    stSurfaceTemp=30,
+    stGndElev=380,
+    stQNH=1029 -- I like a high QNH :)
     }
     
   where 
@@ -84,7 +87,7 @@ handleAirspace :: State -> (State, [(Frequency, String)])
 handleAirspace s = (s { stAirspace=airspace'' }, concat responses)
   where
     airspace                 = stAirspace s
-    airspace'                = map handleAP airspace
+    airspace'                = map (handleAP s) airspace
     (airspace'', responses)  = unzip $ map handleAPResponses airspace'
 
 handleAPResponses :: Element -> (Element, [(Frequency, String)])
@@ -94,24 +97,24 @@ handleAPResponses (AC aeroplane) = (AC aeroplane', responses)
     responses = map ((,) (acfrequency aeroplane)) $ acatcresponses aeroplane
 handleAPResponses e = (e, [])
 
-handleAP :: Element -> Element
-handleAP (AC aeroplane) = AC $ handleAeroplane aeroplane
-handleAP (BC beacon)    = BC beacon
-handleAP (RWY runway)   = RWY runway
-handleAP (OBS obstacle) = OBS obstacle
-handleAP (WP waypoint)  = WP waypoint
-handleAP (Air airspace) = Air airspace
+handleAP :: State -> Element -> Element
+handleAP s (AC aeroplane) = AC $ handleAeroplane s aeroplane
+handleAP _ (BC beacon)    = BC beacon
+handleAP _ (RWY runway)   = RWY runway
+handleAP _ (OBS obstacle) = OBS obstacle
+handleAP _ (WP waypoint)  = WP waypoint
+handleAP _ (Air airspace) = Air airspace
 
 -- TODO: Handle validity and clearance limit!!
-handleAeroplane :: Aeroplane -> Aeroplane
-handleAeroplane a = a' { acatccommands=[] }
+handleAeroplane :: State -> Aeroplane -> Aeroplane
+handleAeroplane s a = a' { acatccommands=[] }
   where
-    a' = foldl handleCmd a commands
+    a' = foldl (handleCmd s) a commands
     commands = [cmd | cmd@(ACCmd {}) <- acatccommands a]
 
-handleCmd :: Aeroplane -> ATCCommand -> Aeroplane
-handleCmd theplane thecommand
-  | applicable      = handleAeroplaneATCCommand theplane $ cmdCommand thecommand
+handleCmd :: State -> Aeroplane -> ATCCommand -> Aeroplane
+handleCmd s theplane thecommand
+  | applicable      = handleAeroplaneATCCommand s theplane $ cmdCommand thecommand
   | otherwise       = theplane
   where
     applicable = broadcast || callsignmatch || registrationmatch
@@ -121,15 +124,43 @@ handleCmd theplane thecommand
     broadcast = cmdBroadcast thecommand
         
 
-handleAeroplaneATCCommand :: Aeroplane -> ACCommand -> Aeroplane
-handleAeroplaneATCCommand a (Turn (TurnLeft (Heading h))) = a''
+handleAeroplaneATCCommand :: State -> Aeroplane -> ACCommand -> Aeroplane
+handleAeroplaneATCCommand _ a (Turn (TurnLeft (Heading h))) = a''
   where
     a' = a { acturnrate=(-180), acturnto=fromIntegral h }
     a'' = acsay a' $ "Left heading " ++ show h ++ " " ++ accallsign a'
-handleAeroplaneATCCommand a (Turn (TurnRight (Heading h))) = a''
+handleAeroplaneATCCommand _ a (Turn (TurnRight (Heading h))) = a''
   where
     a' = a { acturnrate=180,    acturnto=fromIntegral h }
     a'' = acsay a' $ "Right heading " ++ show h ++ " " ++ accallsign a'
+    
+handleAeroplaneATCCommand s a (Climb climbto climbrate) = a''
+  where
+    a' = calcCOD s a True climbto climbrate
+    a'' = acsay a' $ "Climb " ++ show climbto ++ " " ++ accallsign a'
+
+handleAeroplaneATCCommand s a (Descend climbto climbrate) = a''
+  where
+    a' = calcCOD s a False climbto climbrate
+    a'' = acsay a' $ "Down to " ++ show climbto ++ " " ++ accallsign a'
+
+calcCOD :: State -> Aeroplane -> Bool -> VPos -> Rate -> Aeroplane
+calcCOD s a climb climbto climbrate = a'
+  where
+    a' = a { acvclearedaltitude=clearedalt,
+             acvspeed=cod * fromIntegral clearedspd }
+    cod = if climb then 1 else -1
+    clearedalt = vpostotrue dsttemp qnh climbto
+    dsttemp = stdTempDev + approxtmp
+    approxtmp = round $ stdtemp $ (vpostofl qnh climbto) * 100
+    stdTempDev = stSurfaceTemp s - (round $ stdtemp $ stGndElev s)
+    qnh = stQNH s
+    maxclimbrate = acclimbrate a
+    clearedspd = case climbrate of
+      OwnRate -> maxclimbrate
+      (Rate _ (Just OrMore)) -> maxclimbrate
+      (Rate rate _) -> rate -- TODO: handle performance limits
+      
 
 calcit :: State -> ATCState -> IO ()
 calcit state server = do

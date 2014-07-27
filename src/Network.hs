@@ -65,7 +65,10 @@ parseWaypoint :: ATCParser Waypoint
 parseWaypoint = undefined
                 
 parseAC :: ATCParser String
-parseAC = choice [callsign, registration]
+parseAC = do
+  accallsign <- choice [callsign, registration]
+  modifyState (\s -> s {ahLastACCallsign=[accallsign]})
+  return accallsign
   where 
     registration = do
       fst <- upper
@@ -235,7 +238,8 @@ acmds = choice (map try commands) >> getState
   where
     commands = [acmdF,
                 acmdQuit,
-                acmdTurn]
+                acmdTurn,
+                acmdClimbDescent]
     
 acmdQuit :: ATCParser ()
 acmdQuit = do
@@ -245,7 +249,6 @@ acmdQuit = do
 acmdTurn :: ATCParser ()
 acmdTurn = do
   ac <- parseAC
-  modifyState (\s -> s {ahLastACCallsign=[ac]})
   space
   (turndir, skipheading) <- (TurnOwnDiscretion, True) `option` do
     string "turn"
@@ -267,7 +270,34 @@ acmdTurn = do
       (aSimpleCommand . Turn . turndir . Direct) wpnt
     leftright = choice ["left" `means` TurnLeft,
                         "right" `means` TurnRight]
-
+                
+acmdClimbDescent :: ATCParser ()
+acmdClimbDescent = do
+  ac <- parseAC
+  space
+  climbdescent <- choice ["climb" `means` Climb,
+                          "descend" `means` Descend]
+  space
+  flightlevel <- False `option` ("flightlevel " `means` True)
+  number <- read <$> many1 digit
+  if flightlevel then return "" else string " feet"
+  let vpos = (if flightlevel then Flightlevel else Altitude) number
+  rate <- option OwnRate $ try $ do
+    space
+    number2 <- read <$> many1 digit
+    space
+    string "feet" >> space
+    string "per" >> space
+    string "minute"
+    rateflag <- option Nothing $ do
+      space
+      string "or" >> space
+      Just <$> choice ["greater" `means` OrMore,
+                       "more" `means` OrMore,
+                       "less" `means` OrLess]
+    return $ Rate number2 rateflag
+  aSimpleCommand $ climbdescent vpos rate
+  
 acmdF :: ATCParser ()
 acmdF = do
   atcstate <- ahAtcState <$> getState
