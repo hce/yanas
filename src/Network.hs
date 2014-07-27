@@ -1,6 +1,6 @@
 module Network where
 
-import Control.Applicative
+import Control.Applicative ((<$>))
 import Control.Concurrent
 import Control.Concurrent.Chan
 import Control.Concurrent.STM.TVar
@@ -179,7 +179,7 @@ foreverWithState s f = do
     else return newstate
 
 atcPrintResponses :: Handle -> ATCHandlerState -> IO Bool
-atcPrintResponses h cs = do
+atcPrintResponses h cs =
   case ahChanListener cs of
     Just (_, chan) -> do
       cmds <- getItems chan
@@ -238,8 +238,16 @@ acmds = choice (map try commands) >> getState
   where
     commands = [acmdF,
                 acmdQuit,
-                acmdTurn,
-                acmdClimbDescent]
+                acCommands]
+    acCommands = do
+      parseAC -- call sign
+      many1 $ do
+        many1 $ string " "
+        acCommand
+      return ()
+    
+    acCommand = choice $ map try [acmdTurn, acmdClimbDescent]
+
     
 acmdQuit :: ATCParser ()
 acmdQuit = do
@@ -248,8 +256,6 @@ acmdQuit = do
   
 acmdTurn :: ATCParser ()
 acmdTurn = do
-  ac <- parseAC
-  space
   (turndir, skipheading) <- (TurnOwnDiscretion, True) `option` do
     string "turn"
     space
@@ -273,8 +279,6 @@ acmdTurn = do
                 
 acmdClimbDescent :: ATCParser ()
 acmdClimbDescent = do
-  ac <- parseAC
-  space
   climbdescent <- choice ["climb" `means` Climb,
                           "descend" `means` Descend]
   space
