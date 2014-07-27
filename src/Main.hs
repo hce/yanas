@@ -143,6 +143,11 @@ handleAeroplaneATCCommand s a (Descend climbto climbrate) = a''
   where
     a' = calcCOD s a False climbto climbrate
     a'' = acsay a' $ "Down to " ++ show climbto ++ " " ++ accallsign a'
+    
+handleAeroplaneATCCommand s a (QNH qnh) = a''
+  where
+    a' = a { acqnh=qnh }
+    a'' = acsay a' $ "QNH " ++ show qnh ++ " " ++ accallsign a'
 
 calcCOD :: State -> Aeroplane -> Bool -> VPos -> Rate -> Aeroplane
 calcCOD s a climb climbto climbrate = a'

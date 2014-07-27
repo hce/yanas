@@ -246,13 +246,22 @@ acmds = choice (map try commands) >> getState
         acCommand
       return ()
     
-    acCommand = choice $ map try [acmdTurn, acmdClimbDescent]
+    acCommand = choice $ map try trueAtcCommands
+    
+trueAtcCommands = [acmdTurn, acmdClimbDescent, acmdQNH]
 
     
 acmdQuit :: ATCParser ()
 acmdQuit = do
   string "quit"
   modifyState (\s -> s {ahQuit=True})
+  
+acmdQNH :: ATCParser ()
+acmdQNH = do
+  choice [string "QNH", string "qnh"]
+  space
+  qnh <- read <$> many1 digit
+  aSimpleCommand $ QNH qnh
   
 acmdTurn :: ATCParser ()
 acmdTurn = do
