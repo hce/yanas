@@ -158,7 +158,7 @@ data Aeroplane = Aeroplane {
   acheading :: Double,
   -- fpm
   acvspeed :: Double,
-  acvclearedaltitude :: Int,
+  acvclearedaltitude :: VPos,
   actruealt :: Double,
   actransponder :: ([Squawk], Int),
   acequipment :: [Equipment],
@@ -170,7 +170,8 @@ data Aeroplane = Aeroplane {
   acturnto :: Double,
   -- Todo: These two must be calc'ed dynamically!! (aeroplane specs, density alt)
   acclimbrate :: Int,
-  acdescentrate :: Int
+  acdescentrate :: Int,
+  acqnh :: Int -- The QNH the pilots were given by ATC/FIS/Luftaufsicht/...
   }
                  deriving (Show, Eq)
 

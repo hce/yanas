@@ -3,11 +3,19 @@ module Movement where
 import Types
 import AVMisc
 
-moveAC :: Double -> Aeroplane -> Aeroplane
-moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading, acturnrate=newturnrate, acvspeed=newacvspeed }
+moveAC :: Int -> Double -> Aeroplane -> Aeroplane
+moveAC qnh dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading, acturnrate=newturnrate }
   where
-    height = actruealt ap + (acvspeed ap * dt / 60)
-    newacvspeed = if (abs (fromIntegral $ acvclearedaltitude ap) - height) < 50 then 0 else acvspeed ap
+    height = actruealt ap + diffH
+    diffH = if round (actruealt ap) < clearedtruealt'
+            then diffSpeed
+            else -diffSpeed
+    clearedtruealt = case acvclearedaltitude ap of
+      Flightlevel fl -> fltotrue (round $ stdtemp $ fl * 100) ourqnh fl
+      Altitude alt   -> qnhtotrue (round $ stdtemp alt) alt
+    clearedtruealt' = clearedtruealt + ((qnh - ourqnh) * 27)
+    ourqnh = acqnh ap
+    diffSpeed = acvspeed ap * dt / 60
     angle = acheading ap * pi / 180
     acarcspeed = acspeed ap / 60 -- One knot == one "arc minute" per hour
     dx = acarcspeed * sin angle * dt / (3600 * dep)
@@ -23,10 +31,10 @@ moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading
     curheading = acheading ap
     newheading = normaliseHeading $ curheading + acturnrate ap / 60 * dt
 
-moveAeroplanes :: Double -> [Element] -> [Element]
-moveAeroplanes dt (AC aircraft:as) = AC (moveAC dt aircraft):moveAeroplanes dt as
-moveAeroplanes dt (a:as) = a:moveAeroplanes dt as
-moveAeroplanes _ []      = []
+moveAeroplanes :: Int -> Double -> [Element] -> [Element]
+moveAeroplanes qnh dt (AC aircraft:as) = AC (moveAC qnh dt aircraft):moveAeroplanes qnh dt as
+moveAeroplanes qnh dt (a:as) = a:moveAeroplanes qnh dt as
+moveAeroplanes _ _ []      = []
 
 normaliseHeading :: (Num a, Ord a) => a -> a
 normaliseHeading heading
@@ -71,6 +79,6 @@ truetofl temp qnh talt = qnhtofl qnh qnhalt
     qnhalt = round $ fromIntegral talt / altCorrection
     altCorrection = 1 + (tempdiff * 0.04 / 10)
     tempdiff = fromIntegral temp - stdtemp talt
-
+    
 stdtemp :: Int -> Double
 stdtemp truealt = 15 - (fromIntegral truealt * 0.65 / 328.084)

@@ -147,14 +147,9 @@ handleAeroplaneATCCommand s a (Descend climbto climbrate) = a''
 calcCOD :: State -> Aeroplane -> Bool -> VPos -> Rate -> Aeroplane
 calcCOD s a climb climbto climbrate = a'
   where
-    a' = a { acvclearedaltitude=clearedalt,
+    a' = a { acvclearedaltitude=climbto,
              acvspeed=cod * fromIntegral clearedspd }
-    cod = if climb then 1 else -1
-    clearedalt = vpostotrue dsttemp qnh climbto
-    dsttemp = stdTempDev + approxtmp
-    approxtmp = round $ stdtemp $ vpostoqnh qnh climbto
-    stdTempDev = stSurfaceTemp s - round (stdtemp $ stGndElev s)
-    qnh = stQNH s
+    cod = 1 -- Always 1, for both climb and descent!!
     maxclimbrate = acclimbrate a
     clearedspd = case climbrate of
       OwnRate -> maxclimbrate
@@ -169,7 +164,7 @@ calcit state server = do
   flip screen
   delay 100
   state' <- distributeCommands state server
-  let state'' = state' { stAirspace=moveAeroplanes 0.100 (stAirspace state') }
+  let state'' = state' { stAirspace=moveAeroplanes (stQNH state) 0.100 (stAirspace state') }
       (state''', responses) = handleAirspace state''
   mapM_ (uncurry (atcSay server)) responses
   calcit state''' server
