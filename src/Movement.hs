@@ -4,9 +4,10 @@ import Types
 import AVMisc
 
 moveAC :: Double -> Aeroplane -> Aeroplane
-moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading, acturnrate=newturnrate }
+moveAC dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newheading, acturnrate=newturnrate, acvspeed=newacvspeed }
   where
     height = actruealt ap + (acvspeed ap * dt / 60)
+    newacvspeed = if (abs (fromIntegral $ acvclearedaltitude ap) - height) < 50 then 0 else acvspeed ap
     angle = acheading ap * pi / 180
     acarcspeed = acspeed ap / 60 -- One knot == one "arc minute" per hour
     dx = acarcspeed * sin angle * dt / (3600 * dep)
@@ -56,9 +57,9 @@ fltotrue temp qnh fl = truealt
     truealt = qnhtotrue temp qnhalt
     qnhalt  = fltoqnh qnh fl
 
-vpostofl :: Int -> VPos -> Int
-vpostofl qnh (Flightlevel fl)     = fltoqnh qnh fl
-vpostofl _   (Altitude alt)       = alt 
+vpostoqnh :: Int -> VPos -> Int
+vpostoqnh qnh (Flightlevel fl)     = fltoqnh qnh fl
+vpostoqnh _   (Altitude alt)       = alt 
 
 vpostotrue :: Int -> Int -> VPos -> Int
 vpostotrue temp qnh (Flightlevel fl) = fltotrue temp qnh fl

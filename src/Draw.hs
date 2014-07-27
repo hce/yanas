@@ -87,10 +87,10 @@ drawAC state ap = do
     sc = stScreen state
     (acX, acY) = acScreenPos state ap
     str = [accallsign ap,
-           actype ap ++ " A" ++ show (truncate $ actruealt ap / 100),
+           actype ap ++ " FL" ++ show (truncate $ actruealt ap / 100),
            "V" ++ show (truncate $ acvspeed ap) ++ " S" ++ show squawkcode,
            (show . truncate . acspeed $ ap) ++ "KTAS",
-           "H" ++ (show . truncate . acheading) ap ++ "TO" ++ show (acturnto ap)]
+           show . acvclearedaltitude $ ap]
     (squawkmodes, squawkcode) = actransponder ap
     
 drawBC :: State -> Beacon -> IO ()
