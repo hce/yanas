@@ -13,7 +13,7 @@ moveAC qnh dt ap = ap { aclon=lon, aclat=lat, actruealt=height, acheading=newhea
     clearedtruealt = case acvclearedaltitude ap of
       Flightlevel fl -> fltotrue (round $ stdtemp $ fl * 100) ourqnh fl
       Altitude alt   -> qnhtotrue (round $ stdtemp alt) alt
-    clearedtruealt' = clearedtruealt + ((qnh - ourqnh) * 27)
+    clearedtruealt' = clearedtruealt + ((ourqnh - qnh) * 27)
     ourqnh = acqnh ap
     diffSpeed = acvspeed ap * dt / 60
     angle = acheading ap * pi / 180
