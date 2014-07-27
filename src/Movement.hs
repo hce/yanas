@@ -48,7 +48,7 @@ fltoqnh qnh fl = fl * 100 - 27 * qnhdiff
 qnhtotrue :: Int -> Int -> Int
 qnhtotrue temp alt = alt + round altCorrection                     
   where
-    altCorrection = fromIntegral alt * 0.4 * tempdiff / 10
+    altCorrection = fromIntegral alt * 0.04 * tempdiff / 10
     tempdiff = fromIntegral temp - stdtemp alt
     
 fltotrue :: Int -> Int -> Int -> Int
@@ -64,6 +64,13 @@ vpostoqnh _   (Altitude alt)       = alt
 vpostotrue :: Int -> Int -> VPos -> Int
 vpostotrue temp qnh (Flightlevel fl) = fltotrue temp qnh fl
 vpostotrue temp _   (Altitude alt)   = qnhtotrue temp alt
+
+truetofl :: Int -> Int -> Int -> Int
+truetofl temp qnh talt = qnhtofl qnh qnhalt
+  where
+    qnhalt = round $ fromIntegral talt / altCorrection
+    altCorrection = 1 + (tempdiff * 0.04 / 10)
+    tempdiff = fromIntegral temp - stdtemp talt
 
 stdtemp :: Int -> Double
 stdtemp truealt = 15 - (fromIntegral truealt * 0.65 / 328.084)

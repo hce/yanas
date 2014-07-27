@@ -17,6 +17,7 @@ import Graphics.UI.SDL.TTF.General as TTFG
 import Graphics.UI.SDL.TTF.Types
 import qualified Graphics.UI.SDL.Primitives as GFX
 
+import Movement
 import Types
 import AVMisc
 
@@ -87,11 +88,16 @@ drawAC state ap = do
     sc = stScreen state
     (acX, acY) = acScreenPos state ap
     str = [accallsign ap,
-           actype ap ++ " FL" ++ show (truncate $ actruealt ap / 100),
+           actype ap ++ " FL" ++ show acfl,
            "V" ++ show (truncate $ acvspeed ap) ++ " S" ++ show squawkcode,
            (show . truncate . acspeed $ ap) ++ "KTAS",
            show . acvclearedaltitude $ ap]
     (squawkmodes, squawkcode) = actransponder ap
+    acfl = truetofl temp qnh (round $ actruealt ap)
+    temp = round $ stdTempAtAlt + fromIntegral (stSurfaceTemp state) - stdTempAGL
+    stdTempAGL = stdtemp $ stGndElev state
+    stdTempAtAlt = stdtemp $ round $ actruealt ap
+    qnh = stQNH state
     
 drawBC :: State -> Beacon -> IO ()
 drawBC state bcn =  do
