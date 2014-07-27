@@ -94,7 +94,8 @@ drawAC state ap = do
            show . acvclearedaltitude $ ap]
     (squawkmodes, squawkcode) = actransponder ap
     acfl = truetofl temp qnh (round $ actruealt ap)
-    temp = round $ stdTempAtAlt + fromIntegral (stSurfaceTemp state) - stdTempAGL
+    -- temp = round $ stdTempAtAlt + fromIntegral (stSurfaceTemp state) - stdTempAGL
+    temp = round stdTempAtAlt
     stdTempAGL = stdtemp $ stGndElev state
     stdTempAtAlt = stdtemp $ round $ actruealt ap
     qnh = stQNH state
