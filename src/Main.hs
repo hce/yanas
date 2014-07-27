@@ -167,7 +167,7 @@ calcit state server = do
   fillRect screen (Just $ Rect 0 0 800 600) (Pixel 0)
   drawAirspace state
   flip screen
-  delay 100
+  delay 25
   state' <- distributeCommands state server
   let state'' = state' { stAirspace=moveAeroplanes (stQNH state) 0.100 (stAirspace state') }
       (state''', responses) = handleAirspace state''
