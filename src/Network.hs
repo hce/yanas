@@ -199,10 +199,15 @@ atcMainLoop h s cs = do
 --  l <- atcGetLine 1000000 h prompt (atcPrintResponses h cs)
   hPutStr h prompt
   l <- hGetLine h
+  maybeUtter (ahFreq cs) l
   res <- runParserT acmds cs "stdin" l
   case res of
     Left err -> hPrint h err >> return cs
     Right newstate -> return newstate
+    
+maybeUtter :: Maybe (Chan ATCCommand, Frequency) -> String -> IO ()
+maybeUtter Nothing _ = return ()
+maybeUtter (Just (chan, freq)) text = writeChan chan $ ATCText text
 
 --acmds :: ATCHandlerState -> ATCParser
 --acmds = choice . (zipWith (id) commands) . repeat
