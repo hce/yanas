@@ -21,6 +21,9 @@ import Movement
 import Types
 import AVMisc
 
+data TextAlignment = AlignLeft | AlignCenter | AlignRight
+                   deriving (Show, Eq)
+
 coordToScreen :: Integral n => YanasState -> LonLat -> (n, n)
 coordToScreen  s (plon, plat) = (x, y)
   where
@@ -55,13 +58,18 @@ drawCircle s (x, y) r c =
     cos' :: Double -> Int
     cos' a = truncate (cos $ a * pi / 180 * tr)
 
-printText :: YanasState -> (Int, Int) -> Color -> [String] -> IO ()
-printText s (x,y) c lines = do
+printText :: YanasState -> (Int, Int) -> Color -> TextAlignment -> [String] -> IO ()
+printText s (x,y) c align lines = do
   fntsfcs <- mapM (\line -> renderTextSolid fnt line c) lines
   let maxheight = maximum $ map surfaceGetHeight fntsfcs
+      maxwidth  = maximum $ map surfaceGetWidth fntsfcs
       ypos = [y, y+maxheight..]      
+      x' = case align of
+        AlignLeft -> x
+        AlignCenter -> (x - maxwidth) `quot` 2
+        AlignRight -> x - maxwidth
   mapM_ (\(ly,s) -> blitSurface s Nothing sfc
-            (Just Rect {rectX=x, rectY=ly,
+            (Just Rect {rectX=x', rectY=ly,
                         rectW=0, rectH=0} )) $ zip ypos fntsfcs
   where
     sfc = stScreen s
@@ -82,7 +90,7 @@ drawAC :: YanasState -> Aeroplane -> IO ()
 drawAC state ap = do
   fillRect sc (Just Rect {rectX=acX-2, rectY=acY-2,
                           rectW=4, rectH=4}) (Pixel 255)
-  printText state (acX+10,acY-2) (Color 255 255 255) str
+  printText state (acX+10,acY-2) (Color 255 255 255) AlignLeft str
   return ()
   where
     sc = stScreen state
@@ -104,7 +112,7 @@ drawBC :: YanasState -> Beacon -> IO ()
 drawBC state bcn =  do
   fillRect sc (Just Rect {rectX=bcnX-2, rectY=bcnY-2,
                           rectW=4, rectH=4}) (Pixel 65535)
-  printText state (bcnX+10, bcnY-2) (Color 200 200 200) str
+  printText state (bcnX+10, bcnY-2) (Color 200 200 200) AlignLeft str
   when (bcntype bcn == VOR) $ do
     drawCircle sc (bcnX, bcnY) 60 (Pixel 65535)
     GFX.polygon sc (map (fromIntegral Control.Arrow.*** fromIntegral)
@@ -139,7 +147,7 @@ drawOBS = undefined
 drawWP :: YanasState -> Waypoint -> IO ()
 drawWP s (VFRRP lon lat comp dsg dsgl ctr) = do
   drawPicture s coords (if comp then "crp" else "orrp")  
-  printText s coords (Color 255 0 0) [dsg]
+  printText s coords (Color 255 0 0) AlignLeft [dsg]
   return ()
   where
     coords = coordToScreen s (lon, lat)
