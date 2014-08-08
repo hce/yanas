@@ -193,7 +193,7 @@ atcMainLoop h s cs = do
   let freq = case ahFreq cs of
         Just (_, freq) -> show freq
         Nothing        -> "NoFreq"
-  threadDelay 1000000 -- hack
+  -- threadDelay 1000000 -- hack
   atcPrintResponses h cs
   let prompt = "ATC [" ++ freq ++ "] > "
 --  l <- atcGetLine 1000000 h prompt (atcPrintResponses h cs)
