@@ -1,5 +1,6 @@
 module Network (
   ATCState,
+  atcGetSockaddr,
   atcSay,
   atcServer,
   getAllCommands
@@ -34,7 +35,8 @@ type CommandChannel = [(Frequency, TVar [ATCCommand])]
 data ATCState = ATCState {
   atcFrequencies :: [(Frequency, Designation, Chan ATCCommand)],
   atcGetters :: [(Frequency, TVar [ATCCommand])],
-  atcRecorders :: [ThreadId]
+  atcRecorders :: [ThreadId],
+  atcSocket :: Maybe Socket
   }
                 
 data ATCHandlerState = ATCHandlerState {
@@ -97,7 +99,8 @@ atcInit = do
   return ATCState {
     atcFrequencies=newChannels,
     atcGetters=newGetters,
-    atcRecorders=recorders
+    atcRecorders=recorders,
+    atcSocket=Nothing
     }
   where
     genfreqchannel :: (Frequency, Designation) -> IO (Frequency, Designation, Chan ATCCommand)
@@ -136,6 +139,11 @@ _atcGetChannel f state freq
     fst'3 (a,_,_) = a
     thr'3 (_,_,c) = c
 
+atcGetSockaddr :: ATCState -> IO SockAddr
+atcGetSockaddr s = do
+  let Just socket = atcSocket s
+  getSocketName socket
+  
 atcServer :: IO ATCState
 atcServer = withSocketsDo $ do
   state <- atcInit
@@ -146,7 +154,7 @@ atcServer = withSocketsDo $ do
   forkIO $ forever $ do
     conn <- accept atcSock
     forkIO $ atcHandler conn state
-  return state
+  return state { atcSocket=Just atcSock }
     
 atcHandler :: (Socket, SockAddr) -> ATCState -> IO ()
 atcHandler (s, a) state = do

@@ -30,7 +30,7 @@ data YanasState = YanasState {
   stQNH :: Int
   }
              deriving (Eq, Show)
-
+                      
 data Squawk = SquawkA | SquawkC | SquawkS | SquawkIdent
             | Squawk Int | Reset Squawk
               deriving (Eq, Show)

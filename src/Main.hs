@@ -64,10 +64,18 @@ main = do
   calcit state server
   
 
+drawHostInfo state server = do
+  sockaddr <- atcGetSockaddr server
+  let text = "Listening on " ++ show sockaddr ++ " for ATC commands!"
+  printText state (surfaceGetWidth screen,4) (Color 255 255 255) AlignRight [text]
+  where
+    screen = stScreen state
+
 calcit :: YanasState -> ATCState -> IO ()
 calcit state server = do
   fillRect screen (Just $ Rect 0 0 800 600) (Pixel 0)
   drawAirspace state
+  drawHostInfo state server
   flip screen
   delay 25
   state' <- distributeCommands state server
