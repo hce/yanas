@@ -18,7 +18,7 @@ import qualified Graphics.UI.SDL.Primitives as GFX
 
 type LonLat = (Double, Double)
 
-data State = State {
+data YanasState = YanasState {
   stScreen :: Surface,
   stMainfont :: Font,
   stAirspace :: [Element],

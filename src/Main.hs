@@ -31,10 +31,10 @@ import Example
 docoInitScreen =
   setVideoMode 800 600 24 [DoubleBuf]
 
-initState :: Surface -> Font -> [Element] -> IO State
+initState :: Surface -> Font -> [Element] -> IO YanasState
 initState screen mainfont airspace = do
   sfcs <- zip (map snd imgs) <$> mapM (Img.load . ("dist/resources/img/" ++) . fst) imgs
-  return State {
+  return YanasState {
     stScreen=screen,
     stScreenSize=(surfaceGetWidth screen, surfaceGetHeight screen),
     stMainfont=mainfont,
@@ -64,7 +64,7 @@ main = do
   calcit state server
   
 
-calcit :: State -> ATCState -> IO ()
+calcit :: YanasState -> ATCState -> IO ()
 calcit state server = do
   fillRect screen (Just $ Rect 0 0 800 600) (Pixel 0)
   drawAirspace state

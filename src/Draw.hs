@@ -21,7 +21,7 @@ import Movement
 import Types
 import AVMisc
 
-coordToScreen :: Integral n => State -> LonLat -> (n, n)
+coordToScreen :: Integral n => YanasState -> LonLat -> (n, n)
 coordToScreen  s (plon, plat) = (x, y)
   where
     (gl, gt, gr, gb) = stView s
@@ -34,7 +34,7 @@ coordToScreen  s (plon, plat) = (x, y)
     x = truncate $ aprellon * fromIntegral width / gw
     y = truncate $ (gh - aprellat) * fromIntegral height / gh
 
-acScreenPos :: State -> Aeroplane -> (Int, Int)
+acScreenPos :: YanasState -> Aeroplane -> (Int, Int)
 acScreenPos s ap = coordToScreen s (aclon ap, aclat ap)
 
 putPixel :: Surface -> Pixel -> (Int, Int) -> IO Bool
@@ -55,7 +55,7 @@ drawCircle s (x, y) r c =
     cos' :: Double -> Int
     cos' a = truncate (cos $ a * pi / 180 * tr)
 
-printText :: State -> (Int, Int) -> Color -> [String] -> IO ()
+printText :: YanasState -> (Int, Int) -> Color -> [String] -> IO ()
 printText s (x,y) c lines = do
   fntsfcs <- mapM (\line -> renderTextSolid fnt line c) lines
   let maxheight = maximum $ map surfaceGetHeight fntsfcs
@@ -67,7 +67,7 @@ printText s (x,y) c lines = do
     sfc = stScreen s
     fnt = stMainfont s
     
-drawPicture :: State -> (Int, Int) -> String -> IO Bool
+drawPicture :: YanasState -> (Int, Int) -> String -> IO Bool
 drawPicture state (x,y) img = blitSurface s Nothing (stScreen state)
                               (Just Rect {rectX=cx, rectY=cy,
                                           rectW=0, rectH=0})
@@ -78,7 +78,7 @@ drawPicture state (x,y) img = blitSurface s Nothing (stScreen state)
     cx = x - (width `quot` 2)
     cy = y - (height `quot` 2)
   
-drawAC :: State -> Aeroplane -> IO ()
+drawAC :: YanasState -> Aeroplane -> IO ()
 drawAC state ap = do
   fillRect sc (Just Rect {rectX=acX-2, rectY=acY-2,
                           rectW=4, rectH=4}) (Pixel 255)
@@ -100,7 +100,7 @@ drawAC state ap = do
     stdTempAtAlt = stdtemp $ round $ actruealt ap
     qnh = stQNH state
     
-drawBC :: State -> Beacon -> IO ()
+drawBC :: YanasState -> Beacon -> IO ()
 drawBC state bcn =  do
   fillRect sc (Just Rect {rectX=bcnX-2, rectY=bcnY-2,
                           rectW=4, rectH=4}) (Pixel 65535)
@@ -130,13 +130,13 @@ drawBC state bcn =  do
       ILS -> show rawfreq
       DME -> show rawfreq
 
-drawRWY :: State -> Runway -> IO ()
+drawRWY :: YanasState -> Runway -> IO ()
 drawRWY = undefined
 
-drawOBS :: State -> Obstacle -> IO ()
+drawOBS :: YanasState -> Obstacle -> IO ()
 drawOBS = undefined
 
-drawWP :: State -> Waypoint -> IO ()
+drawWP :: YanasState -> Waypoint -> IO ()
 drawWP s (VFRRP lon lat comp dsg dsgl ctr) = do
   drawPicture s coords (if comp then "crp" else "orrp")  
   printText s coords (Color 255 0 0) [dsg]
@@ -144,7 +144,7 @@ drawWP s (VFRRP lon lat comp dsg dsgl ctr) = do
   where
     coords = coordToScreen s (lon, lat)
     
-drawAir :: State -> Airspace -> IO Bool
+drawAir :: YanasState -> Airspace -> IO Bool
 drawAir s spc = GFX.polygon screen coords color
   where
     screen = stScreen s
@@ -152,7 +152,7 @@ drawAir s spc = GFX.polygon screen coords color
     color = Pixel (255 + 255 * 256 + 255 * 65536)
     poly = airPolygone spc
 
-drawAirspace :: State -> IO ()
+drawAirspace :: YanasState -> IO ()
 drawAirspace state = mapM_ drawAirspaceElement aspc
   where
     aspc = stAirspace state

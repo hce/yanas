@@ -28,14 +28,14 @@ import Movement
 import Example
 
 
-distributeCommands :: State -> ATCState -> IO State
+distributeCommands :: YanasState -> ATCState -> IO YanasState
 distributeCommands state server = do
   commands <- getAllCommands server
   let newstate = foldl assignCmd state commands
 --  when (newstate /= state) $ print $ stAirspace newstate
   return newstate
   where
-    assignCmd :: State -> (Frequency, ATCCommand) -> State
+    assignCmd :: YanasState -> (Frequency, ATCCommand) -> YanasState
     assignCmd s fc = s { stAirspace=map (assignToAC fc) (stAirspace s) }
     assignToAC :: (Frequency, ATCCommand) -> Element -> Element
     assignToAC (f,c) (AC aeroplane) = AC $
@@ -49,7 +49,7 @@ acsay a s = a { acatcresponses=responses++[s] }
   where
     responses = acatcresponses a
     
-handleAirspace :: State -> (State, [(Frequency, String)])
+handleAirspace :: YanasState -> (YanasState, [(Frequency, String)])
 handleAirspace s = (s { stAirspace=airspace'' }, concat responses)
   where
     airspace                 = stAirspace s
@@ -63,7 +63,7 @@ handleAPResponses (AC aeroplane) = (AC aeroplane', responses)
     responses = map ((,) (acfrequency aeroplane)) $ acatcresponses aeroplane
 handleAPResponses e = (e, [])
 
-handleAP :: State -> Element -> Element
+handleAP :: YanasState -> Element -> Element
 handleAP s (AC aeroplane) = AC $ handleAeroplane s aeroplane
 handleAP _ (BC beacon)    = BC beacon
 handleAP _ (RWY runway)   = RWY runway
@@ -72,13 +72,13 @@ handleAP _ (WP waypoint)  = WP waypoint
 handleAP _ (Air airspace) = Air airspace
 
 -- TODO: Handle validity and clearance limit!!
-handleAeroplane :: State -> Aeroplane -> Aeroplane
+handleAeroplane :: YanasState -> Aeroplane -> Aeroplane
 handleAeroplane s a = a' { acatccommands=[] }
   where
     a' = foldl (handleCmd s) a commands
     commands = [cmd | cmd@(ACCmd {}) <- acatccommands a]
 
-handleCmd :: State -> Aeroplane -> ATCCommand -> Aeroplane
+handleCmd :: YanasState -> Aeroplane -> ATCCommand -> Aeroplane
 handleCmd s theplane thecommand
   | applicable      = handleAeroplaneATCCommand s theplane $ cmdCommand thecommand
   | otherwise       = theplane
@@ -90,7 +90,7 @@ handleCmd s theplane thecommand
     broadcast = cmdBroadcast thecommand
         
 
-handleAeroplaneATCCommand :: State -> Aeroplane -> ACCommand -> Aeroplane
+handleAeroplaneATCCommand :: YanasState -> Aeroplane -> ACCommand -> Aeroplane
 handleAeroplaneATCCommand _ a (Turn (TurnLeft (Heading h))) = a''
   where
     a' = a { acturnrate=(-180), acturnto=fromIntegral h }
@@ -115,7 +115,7 @@ handleAeroplaneATCCommand s a (QNH qnh) = a''
     a' = a { acqnh=qnh }
     a'' = acsay a' $ "QNH " ++ show qnh ++ " " ++ accallsign a'
 
-calcCOD :: State -> Aeroplane -> Bool -> VPos -> Rate -> Aeroplane
+calcCOD :: YanasState -> Aeroplane -> Bool -> VPos -> Rate -> Aeroplane
 calcCOD s a climb climbto climbrate = a'
   where
     a' = a { acvclearedaltitude=climbto,
