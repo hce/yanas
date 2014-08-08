@@ -1,4 +1,10 @@
-module Network where
+module Network (
+  ATCState,
+  atcSay,
+  atcServer,
+  getAllCommands
+  )
+       where
 
 import Control.Applicative ((<$>))
 import Control.Concurrent
