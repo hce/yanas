@@ -28,6 +28,7 @@ import qualified Data.HashMap.Strict as Map
 
 import Command
 import Types
+import Util
 
 import Example
 
@@ -209,7 +210,16 @@ atcMainLoop h s cs = do
   maybeUtter (ahFreq cs) l
   res <- runParserT acmds cs "stdin" l
   case res of
-    Left err -> (hPutStr h $ nlcrlf $ show err) >> return cs
+    Left err -> do
+      hPutStr h "/====================================================================\\\r\n"
+      hPutStr h "|                                ERROR                               |\r\n"
+      let errlines = do 
+            line <- lines $ show err
+            line' <- wrapLine 65 line            
+            return $ "|" ++ line' ++ replicate (68 - length line') ' ' ++ "|"
+      mapM_ (\line -> hPutStr h line >> hPutStr h "\n\r") errlines
+      hPutStr h "\\====================================================================/\r\n"
+      return cs
     Right newstate -> return newstate
     
     
