@@ -240,8 +240,10 @@ atcGetLine h prompt cs = do
               readLine commVar curstring
             '\DEL' -> do
               atomically $ writeTVar commVar ATCREEmpty
-              hPutStr h "\x1B[1D \x1B[1D"
-              readLine commVar $ tail curstring
+              if length curstring > 0 then do
+                hPutStr h "\x1B[1D \x1B[1D"
+                readLine commVar $ tail curstring
+                else readLine commVar curstring              
             '\x00' -> do
               atomically $ writeTVar commVar ATCREEmpty
               readLine commVar curstring
