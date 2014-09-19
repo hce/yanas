@@ -271,7 +271,7 @@ data Element = AC Aeroplane | BC Beacon | RWY Runway
 
 instance Show Frequency where
   show (Frequency f)
-    | zeroes f >= 5   = show mhz ++ "." ++ show hkhz
+    | zeroes f >= 5   = show mhz ++ "." ++ show hkhz ++ "  "
     | zeroes f >= 3   = show mhz ++ "." ++ show khz
     | otherwise       = show f
     where
