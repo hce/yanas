@@ -231,6 +231,13 @@ data Waypoint = VFRRP {
   vfrctr :: String}
                 deriving (Show, Eq)
                          
+data NavAction = NavigateTo {
+  navto     :: Waypoint,
+  navspeed  :: Rate,
+  navvspeed :: Rate,
+  navalt    :: VPos
+  }
+                         
 data AirspaceClassification = AirspaceA | AirspaceB | AirspaceC |
                               AirspaceD | AirspaceE | AirspaceF |
                               AirspaceG | AirspaceEDR | AirspaceEDD
