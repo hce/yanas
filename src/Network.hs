@@ -209,7 +209,7 @@ atcMainLoop h s cs = do
   maybeUtter (ahFreq cs) l
   res <- runParserT acmds cs "stdin" l
   case res of
-    Left err -> hPrint h err >> return cs
+    Left err -> (hPutStr h $ nlcrlf $ show err) >> return cs
     Right newstate -> return newstate
     
     
@@ -446,3 +446,10 @@ acmdF = do
                                then Just (c, d)
                                else findFreq fs wf
     findFreq [] _            = Nothing
+
+nlcrlf :: String -> String
+nlcrlf s = do
+  char <- s
+  if char == '\n'
+    then "\n\r"
+    else return char
