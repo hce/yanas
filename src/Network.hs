@@ -10,6 +10,7 @@ module Network (
 import Control.Applicative ((<$>))
 import Control.Concurrent
 import Control.Concurrent.Chan
+import Control.Concurrent.STM
 import Control.Concurrent.STM.TVar
 import Control.Monad
 import Control.Monad.Trans
@@ -44,9 +45,10 @@ data ATCHandlerState = ATCHandlerState {
   ahLastACCallsign :: [String],
   ahHandle :: Handle,
   ahFreq :: Maybe (Chan ATCCommand, Frequency),  
-  ahChanListener :: Maybe (ThreadId, TVar [ATCCommand]),
   ahQuit :: Bool
   }
+                       
+data ATCReadlineEvent = ATCRECharEntered Char | ATCREATCCommand ATCCommand | ATCREFinished | ATCREEmpty | ATCRERedraw
                        
 type ATCParser a = ParsecT String ATCHandlerState IO a
 
@@ -128,7 +130,7 @@ atcGetChannel :: ATCState -> Frequency -> IO (Maybe (Chan ATCCommand))
 atcGetChannel = _atcGetChannel dupChan
 
 atcGetChannel' :: ATCState -> Frequency -> IO (Maybe (Chan ATCCommand))
-atcGetChannel' = _atcGetChannel (return . id)
+atcGetChannel' = _atcGetChannel return
 
 _atcGetChannel :: (Chan ATCCommand -> IO (Chan ATCCommand)) -> ATCState -> Frequency -> IO (Maybe (Chan ATCCommand))
 _atcGetChannel f state freq
@@ -160,28 +162,32 @@ atcHandler :: (Socket, SockAddr) -> ATCState -> IO ()
 atcHandler (s, a) state = do
   h <- socketToHandle s ReadWriteMode
   hSetBuffering h NoBuffering
-  hPutStrLn h "Welcome to HC's ATC simulator!"
-  hPutStrLn h "Enter help for a list of commands."
-  hPutStrLn h "----------------------------------------------------------------------\n"
-  hPutStrLn h "To begin your shift, select a frequency!"
-  hPutStrLn h "The command for that is: f <FREQ>"
-  hPutStrLn h "<FREQ> must be in the form 118.0, 118.4 or 118.250."
-  hPutStrLn h "The following frequencies are available:"
-  mapM_ (\(f,d,_) -> hPutStrLn h $ "    " ++ show f ++ " | " ++ d) (atcFrequencies state)
-  hPutStrLn h "======================================================================\n"
+  hPutStr   h "\xFF\xFE\x01"
+  hPutStr   h "\xFF\xFB\x01"
+  hPutStr   h "\xFF\xFB\x03"
+  hPutStr   h "\xFF\xFB\x22"
+  sequence_ $ take 9 $ repeat $ hGetChar h
+  hPutStrLn h "Welcome to HC's ATC simulator!\r"
+  hPutStrLn h "Enter help for a list of commands.\r"
+  hPutStrLn h "----------------------------------------------------------------------\r\n"
+  hPutStrLn h "To begin your shift, select a frequency!\r"
+  hPutStrLn h "The command for that is: f <FREQ>\r"
+  hPutStrLn h "<FREQ> must be in the form 118.0, 118.4 or 118.250.\r"
+  hPutStrLn h "The following frequencies are available:\r"
+  mapM_ (\(f,d,_) -> hPutStrLn h $ "    " ++ show f ++ " | " ++ d ++ "\r") (atcFrequencies state)
+  hPutStrLn h "======================================================================\r\n"
 
   let cs = ATCHandlerState {
         ahAtcState = state,
         ahHandle = h,
         ahFreq=Nothing,
         ahQuit=False,
-        ahLastACCallsign=[],
-        ahChanListener=Nothing
+        ahLastACCallsign=[]
         }
 
   void $ foreverWithState cs (atcMainLoop h state)
   
-  hPutStrLn h "Hope you had safe fun! Bye!"
+  hPutStrLn h "Hope you had safe fun! Bye!\r"
   hClose h
   
   
@@ -192,33 +198,110 @@ foreverWithState s f = do
     then foreverWithState newstate f
     else return newstate
 
-atcPrintResponses :: Handle -> ATCHandlerState -> IO Bool
-atcPrintResponses h cs =
-  case ahChanListener cs of
-    Just (_, chan) -> do
-      cmds <- getItems chan
-      let messages = [msg | msg@(ATCText {}) <- cmds]
-      mapM_ (hPutStrLn h . ("\r  Freq | " ++) . cmdText) messages
-      return True
-    Nothing -> return False
-
 atcMainLoop :: Handle -> ATCState -> ATCHandlerState -> IO ATCHandlerState
 atcMainLoop h s cs = do
   let freq = case ahFreq cs of
         Just (_, freq) -> show freq
         Nothing        -> "NoFreq"
   -- threadDelay 1000000 -- hack
-  atcPrintResponses h cs
   let prompt = "ATC [" ++ freq ++ "] > "
---  l <- atcGetLine 1000000 h prompt (atcPrintResponses h cs)
-  hPutStr h prompt
-  l <- hGetLine h
+  l <- atcGetLine h prompt cs
   maybeUtter (ahFreq cs) l
   res <- runParserT acmds cs "stdin" l
   case res of
     Left err -> hPrint h err >> return cs
     Right newstate -> return newstate
     
+    
+atcGetLine :: Handle -> String -> ATCHandlerState -> IO String
+atcGetLine h prompt cs = do
+  commVar <- atomically $ newTVar ATCRERedraw
+  forkIO $ readCS commVar
+  forkIO $ readSC commVar
+  readLine commVar ""
+
+  where
+    readLine commVar curstring = do
+      command <- atomically $ do
+        var <- readTVar commVar
+        case var of
+          ATCREEmpty -> retry;
+          _          -> return var
+      case command of
+        ATCREFinished -> return $ reverse curstring
+        ATCRECharEntered c -> do
+          case c of
+            '\r' -> do
+              hPutStr h "\r\n"
+              atomically $ writeTVar commVar ATCREFinished
+              readLine commVar curstring
+            '\n' -> do
+              atomically $ writeTVar commVar ATCREEmpty
+              readLine commVar curstring
+            '\DEL' -> do
+              atomically $ writeTVar commVar ATCREEmpty
+              hPutStr h "\x1B[1D \x1B[1D"
+              readLine commVar $ tail curstring
+            '\x00' -> do
+              atomically $ writeTVar commVar ATCREEmpty
+              readLine commVar curstring
+            _    -> do
+              hPutChar h c
+              atomically $ writeTVar commVar ATCREEmpty
+              readLine commVar $ c:curstring
+        ATCREATCCommand command -> do
+          case command of
+            ATCText text -> do
+              hPutStr h "\r                                                                      \r"
+              hPutStr h text
+              hPutStr h "\r\n"
+            _            -> return ()            
+          atomically $ writeTVar commVar ATCRERedraw
+          readLine commVar curstring
+        ATCRERedraw -> do
+          hPutStr h prompt
+          hPutStr h $ reverse curstring
+          atomically $ writeTVar commVar ATCREEmpty
+          readLine commVar curstring
+          
+    readCS commVar = do
+      case ahFreq cs of
+        Just (chan, freq) -> do
+          doproceed <- doProceed commVar
+          when doproceed $ do
+            chanValue <- readChan chan
+            atomically $ do
+              curValue <- readTVar commVar
+              case curValue of
+                ATCREEmpty -> writeTVar commVar (ATCREATCCommand chanValue)
+                ATCREFinished -> return ()
+                _ -> retry
+            readCS commVar
+        _ -> return ()
+        
+    readSC commVar = do
+      doproceed <- doProceed commVar
+      when doproceed $ do
+        char <- hGetChar h
+        ATCRECharEntered <$> return char >>= doWriteTo commVar
+        readSC commVar
+      
+doWriteTo :: TVar ATCReadlineEvent -> ATCReadlineEvent -> IO ()
+doWriteTo commVar val = atomically $ do
+  curVal <- readTVar commVar
+  case curVal of
+    ATCREEmpty    -> writeTVar commVar val
+    ATCREFinished -> return ()
+    _             -> retry
+    
+doProceed :: TVar ATCReadlineEvent -> IO Bool
+doProceed commVar = atomically $ do
+  val <- readTVar commVar
+  case val of
+    ATCREFinished -> return False
+    ATCREEmpty    -> return True
+    _             -> retry
+
 maybeUtter :: Maybe (Chan ATCCommand, Frequency) -> String -> IO ()
 maybeUtter Nothing _ = return ()
 maybeUtter (Just (chan, freq)) text = writeChan chan $ ATCText text
@@ -230,8 +313,10 @@ maybeUtter (Just (chan, freq)) text = writeChan chan $ ATCText text
     
 aPutStrLn :: String -> ATCParser ()
 aPutStrLn s = do
-  state <- getState
-  lift $ hPutStrLn (ahHandle state) s
+  h <- ahHandle <$> getState
+  lift $ do
+    hPutStrLn h s
+    hPutChar  h '\r'
 
 aPrint :: Show a => a -> ATCParser ()
 aPrint = aPutStrLn . show
@@ -348,14 +433,8 @@ acmdF = do
   aPutStrLn $ "Setting your frequency to " ++ freq ++ "!"
   case freqchan of
     Just (chan, designation) -> do
-      oldFreqListener <- ahChanListener <$> getState
-      case oldFreqListener of
-        Just (oldThreadId, _) -> lift $ killThread oldThreadId
-        Nothing -> return ()
       chan' <- lift $ dupChan chan
-      (threadId, freqListener) <- lift $ makeChanListener chan'
-      modifyState (\s -> s { ahFreq=Just (chan, Frequency freqi),
-                             ahChanListener=Just (threadId, freqListener) } )
+      modifyState (\s -> s { ahFreq=Just (chan', Frequency freqi) } )
       aPutStrLn $ "There. You are tuned into " ++ designation ++ " now."
     Nothing ->
       aPutStrLn "Frequency is not in use"
